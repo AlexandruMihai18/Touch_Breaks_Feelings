@@ -10,8 +10,19 @@ from torch import nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 
-from .dataset import DinoFrameDataset, DinoSample, load_splits, split_samples
-from .evaluate import compute_metrics, device_from_args, run_predictions
+import numpy as np
+
+from .dataset import DinoFrameDataset, DinoSample, filter_point_samples, load_splits, split_samples
+from .evaluate import (
+    build_prediction_rows,
+    compute_metrics,
+    compute_point_metrics,
+    dataset_output_name,
+    device_from_args,
+    prediction_csv_name,
+    run_predictions,
+    save_predictions_csv,
+)
 from .hf import auth_kwargs, explain_hf_load_error
 from .model import DinoClassifier
 
@@ -68,12 +79,13 @@ def _run_epoch(
     criterion: nn.Module,
     optimizer: torch.optim.Optimizer | None,
     device: torch.device,
+    task: str = "binary",
 ) -> tuple[float, float]:
     train = optimizer is not None
     model.head.train(train)
     total_loss = 0.0
-    labels: list[int] = []
-    preds: list[int] = []
+    labels: list = []
+    preds: list = []
 
     for batch in loader:
         pixel_values, batch_labels = batch[:2]
@@ -88,10 +100,20 @@ def _run_epoch(
             optimizer.step()
 
         total_loss += loss.item() * len(batch_labels)
-        labels.extend(batch_labels.cpu().tolist())
-        preds.extend(torch.argmax(logits.detach(), dim=1).cpu().tolist())
+        if task == "point":
+            labels.extend(batch_labels.cpu().tolist())
+            preds.extend(logits.detach().cpu().tolist())
+        else:
+            labels.extend(batch_labels.cpu().tolist())
+            preds.extend(torch.argmax(logits.detach(), dim=1).cpu().tolist())
 
-    return total_loss / len(loader.dataset), accuracy_score(labels, preds)
+    if task == "point":
+        pred_arr = np.asarray(preds, dtype=np.float64)
+        label_arr = np.asarray(labels, dtype=np.float64)
+        metric = float(np.linalg.norm(pred_arr - label_arr, axis=1).mean())
+    else:
+        metric = accuracy_score(labels, preds)
+    return total_loss / len(loader.dataset), metric
 
 
 def _build_loaders(
@@ -101,21 +123,23 @@ def _build_loaders(
     processor,
     batch_size: int,
     num_workers: int,
+    task: str,
+    seed: int,
 ) -> tuple[DataLoader, DataLoader, DataLoader]:
     train_loader = DataLoader(
-        DinoFrameDataset(train_samples, processor),
+        DinoFrameDataset(train_samples, processor, task=task, seed=seed),
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
     )
     val_loader = DataLoader(
-        DinoFrameDataset(val_samples, processor),
+        DinoFrameDataset(val_samples, processor, task=task, seed=seed),
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
     )
     test_loader = DataLoader(
-        DinoFrameDataset(test_samples, processor),
+        DinoFrameDataset(test_samples, processor, task=task, seed=seed),
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
@@ -157,6 +181,20 @@ def train(args) -> dict:
         seed=args.seed,
         max_samples=args.max_samples,
     )
+    point_skip_counts = None
+    if args.task == "point":
+        train_filtered, train_skipped = filter_point_samples(splits.train)
+        test_filtered, test_skipped = filter_point_samples(splits.test)
+        point_skip_counts = {
+            "train_source_skipped": train_skipped,
+            "test_source_skipped": test_skipped,
+        }
+        splits = type(splits)(train=train_filtered, test=test_filtered)
+        if len(splits.train) < 2:
+            raise ValueError("Point task needs at least two valid touch samples in the train split")
+        if not splits.test:
+            raise ValueError("Point task needs at least one valid touch sample in the test split")
+
     train_samples, val_samples = split_samples(splits.train, args.val_split, args.seed)
     test_samples = splits.test
 
@@ -170,6 +208,8 @@ def train(args) -> dict:
             "num_test_samples": len(test_samples),
         }
     )
+    if point_skip_counts is not None:
+        config.update(point_skip_counts)
     if wandb_run is not None:
         wandb_run.config.update(config, allow_val_change=True)
 
@@ -188,9 +228,9 @@ def train(args) -> dict:
         raise explain_hf_load_error(exc, args.model_id) from exc
     encoder.eval()
 
-    model = DinoClassifier(encoder, head_type=args.head_type).to(device)
+    model = DinoClassifier(encoder, head_type=args.head_type, num_classes=2).to(device)
     optimizer = Adam(model.head.parameters(), lr=args.lr)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.SmoothL1Loss() if args.task == "point" else nn.CrossEntropyLoss()
 
     train_loader, val_loader, test_loader = _build_loaders(
         train_samples,
@@ -199,6 +239,8 @@ def train(args) -> dict:
         processor,
         args.batch_size,
         args.num_workers,
+        args.task,
+        args.seed,
     )
 
     train_losses: list[float] = []
@@ -208,23 +250,26 @@ def train(args) -> dict:
     patience_counter = 0
 
     for epoch in range(1, args.epochs + 1):
-        train_loss, train_acc = _run_epoch(model, train_loader, criterion, optimizer, device)
-        val_loss, val_acc = _run_epoch(model, val_loader, criterion, None, device)
+        train_loss, train_metric = _run_epoch(
+            model, train_loader, criterion, optimizer, device, task=args.task
+        )
+        val_loss, val_metric = _run_epoch(model, val_loader, criterion, None, device, task=args.task)
         train_losses.append(train_loss)
         val_losses.append(val_loss)
+        metric_name = "mean_error" if args.task == "point" else "acc"
         print(
             f"Epoch {epoch}/{args.epochs} "
-            f"train_loss={train_loss:.4f} train_acc={train_acc:.4f} "
-            f"val_loss={val_loss:.4f} val_acc={val_acc:.4f}"
+            f"train_loss={train_loss:.4f} train_{metric_name}={train_metric:.4f} "
+            f"val_loss={val_loss:.4f} val_{metric_name}={val_metric:.4f}"
         )
         if wandb_run is not None:
             wandb_run.log(
                 {
                     "epoch": epoch,
                     "train/loss": train_loss,
-                    "train/accuracy": train_acc,
+                    f"train/{metric_name}": train_metric,
                     "val/loss": val_loss,
-                    "val/accuracy": val_acc,
+                    f"val/{metric_name}": val_metric,
                 },
                 step=epoch,
             )
@@ -250,6 +295,7 @@ def train(args) -> dict:
             "model_id": args.model_id,
             "hidden_size": getattr(encoder.config, "hidden_size", None),
             "head_type": args.head_type,
+            "task": args.task,
             "label_map": {"no-touch": 0, "touch": 1},
         },
         checkpoint_path,
@@ -257,42 +303,68 @@ def train(args) -> dict:
     _save_loss_plot(train_losses, val_losses, output_dir / "dino_training_loss.png")
     plot_path = output_dir / "dino_training_loss.png"
 
-    preds, labels, datasets, video_ids, frame_ids = run_predictions(model, test_loader, device)
-    metrics = compute_metrics(preds, labels, datasets)
+    preds, labels, datasets, video_ids, frame_ids, frame_paths, widths, heights = run_predictions(
+        model, test_loader, device, task=args.task
+    )
+    if args.task == "point":
+        metrics = compute_point_metrics(preds, labels, datasets, widths, heights)
+    else:
+        metrics = compute_metrics(preds, labels, datasets)
+    dataset_name = dataset_output_name(datasets)
+    predictions_path = output_dir / prediction_csv_name(dataset_name, args.task, args.head_type)
     metrics.update(
         {
             "best_val_loss": best_val_loss,
             "checkpoint": str(checkpoint_path),
             "model_id": args.model_id,
             "head_type": args.head_type,
+            "task": args.task,
+            "predictions_csv": str(predictions_path),
             "hyperparameters": config,
         }
     )
     metrics_path = output_dir / "metrics.json"
     metrics_path.write_text(json.dumps(metrics, indent=2))
-    predictions_path = output_dir / "predictions.csv"
-    from .evaluate import build_prediction_rows, save_predictions_csv
-
     save_predictions_csv(
-        build_prediction_rows(preds, labels, video_ids, frame_ids),
+        build_prediction_rows(
+            preds,
+            labels,
+            video_ids,
+            frame_ids,
+            frame_paths,
+            widths,
+            heights,
+            task=args.task,
+        ),
         predictions_path,
     )
     if wandb_run is not None:
         import wandb
 
-        wandb_run.log(
-            {
-                "test/accuracy": metrics["accuracy"],
-                "test/precision": metrics["precision"],
-                "test/recall": metrics["recall"],
-                "test/f1": metrics["f1"],
-                "test/tp": metrics["tp"],
-                "test/fp": metrics["fp"],
-                "test/tn": metrics["tn"],
-                "test/fn": metrics["fn"],
-                "best_val_loss": best_val_loss,
-            }
-        )
+        wandb_metrics = {"best_val_loss": best_val_loss}
+        if args.task == "point":
+            wandb_metrics.update(
+                {
+                    "test/mean_euclidean_error": metrics["mean_euclidean_error"],
+                    "test/median_euclidean_error": metrics["median_euclidean_error"],
+                    "test/mean_pixel_euclidean_error": metrics["mean_pixel_euclidean_error"],
+                    "test/median_pixel_euclidean_error": metrics["median_pixel_euclidean_error"],
+                }
+            )
+        else:
+            wandb_metrics.update(
+                {
+                    "test/accuracy": metrics["accuracy"],
+                    "test/precision": metrics["precision"],
+                    "test/recall": metrics["recall"],
+                    "test/f1": metrics["f1"],
+                    "test/tp": metrics["tp"],
+                    "test/fp": metrics["fp"],
+                    "test/tn": metrics["tn"],
+                    "test/fn": metrics["fn"],
+                }
+            )
+        wandb_run.log(wandb_metrics)
         artifact = wandb.Artifact(
             name=f"{wandb_run.name or 'dino'}-outputs",
             type="dino-training-output",

@@ -6,8 +6,14 @@ from pathlib import Path
 
 import torch
 
-from .dataset import DATASET_REGISTRY, load_splits
-from .evaluate import device_from_args, evaluate_samples, save_metrics
+from .dataset import DATASET_REGISTRY, filter_point_samples, load_splits
+from .evaluate import (
+    dataset_output_name,
+    device_from_args,
+    evaluate_samples,
+    prediction_csv_name,
+    save_metrics,
+)
 from .hf import auth_kwargs, explain_hf_load_error
 from .model import HEAD_TYPES
 from .train import DEFAULT_MODEL_ID, train
@@ -62,6 +68,12 @@ def parse_args() -> argparse.Namespace:
     train_parser.add_argument("--patience", type=int, default=5)
     train_parser.add_argument("--device", default="auto")
     train_parser.add_argument(
+        "--task",
+        choices=["binary", "point"],
+        default="binary",
+        help="Train a binary touch classifier or a touch-point regressor.",
+    )
+    train_parser.add_argument(
         "--head-type",
         choices=HEAD_TYPES,
         default="mlp",
@@ -92,6 +104,12 @@ def parse_args() -> argparse.Namespace:
     eval_parser.add_argument("--num-workers", type=int, default=0)
     eval_parser.add_argument("--device", default="auto")
     eval_parser.add_argument(
+        "--task",
+        choices=["binary", "point"],
+        default=None,
+        help="Override task. Defaults to the value saved in the checkpoint.",
+    )
+    eval_parser.add_argument(
         "--head-type",
         choices=HEAD_TYPES,
         default=None,
@@ -101,7 +119,7 @@ def parse_args() -> argparse.Namespace:
     eval_parser.add_argument(
         "--predictions-out",
         type=Path,
-        default=Path("checkpoints/dino/eval_predictions.csv"),
+        default=None,
         help="CSV path for per-sample predictions.",
     )
 
@@ -115,6 +133,10 @@ def evaluate_command(args: argparse.Namespace) -> dict:
     model_id = args.model_id or (
         checkpoint.get("model_id") if isinstance(checkpoint, dict) else None
     ) or DEFAULT_MODEL_ID
+    task = args.task or (checkpoint.get("task") if isinstance(checkpoint, dict) else None) or "binary"
+    head_type = args.head_type or (
+        checkpoint.get("head_type") if isinstance(checkpoint, dict) else None
+    ) or "mlp"
 
     splits = load_splits(
         datasets=args.datasets,
@@ -123,6 +145,14 @@ def evaluate_command(args: argparse.Namespace) -> dict:
         auto_split_test_size=args.auto_split_test_size,
         seed=args.seed,
         max_samples=args.max_samples,
+    )
+    test_samples = splits.test
+    if task == "point":
+        test_samples, skipped = filter_point_samples(test_samples)
+        print(f"Point evaluation: skipped {skipped} non-touch/missing-mask samples")
+    dataset_name = dataset_output_name([sample.dataset for sample in test_samples])
+    predictions_out = args.predictions_out or (
+        args.metrics_out.parent / prediction_csv_name(dataset_name, task, head_type)
     )
     device = device_from_args(args.device)
     try:
@@ -140,21 +170,25 @@ def evaluate_command(args: argparse.Namespace) -> dict:
     encoder.eval()
 
     metrics = evaluate_samples(
-        samples=splits.test,
+        samples=test_samples,
         processor=processor,
         encoder=encoder,
         checkpoint=args.checkpoint,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         device=device,
-        head_type=args.head_type,
-        predictions_out=args.predictions_out,
+        head_type=head_type,
+        predictions_out=predictions_out,
+        task=task,
     )
     metrics["model_id"] = model_id
+    metrics["task"] = task
+    metrics["head_type"] = head_type
+    metrics["predictions_csv"] = str(predictions_out)
     save_metrics(metrics, args.metrics_out)
     print(json.dumps(metrics, indent=2))
     print(f"Saved metrics: {args.metrics_out}")
-    print(f"Saved predictions: {args.predictions_out}")
+    print(f"Saved predictions: {predictions_out}")
     return metrics
 
 
