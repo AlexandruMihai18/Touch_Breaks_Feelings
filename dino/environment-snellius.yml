@@ -1,0 +1,27 @@
+name: dino-touch-snellius
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pytorch>=2.5,<2.8
+  - torchvision>=0.20,<0.23
+  - pytorch-cuda=12.4
+  - pip
+  - pip:
+      # DINOv3 support requires transformers >=4.56.0.
+      - transformers>=4.56.0,<6
+      - accelerate>=0.30.0
+      - safetensors>=0.4.0
+
+      # Data, metrics, plots, and image loading.
+      - numpy>=1.26
+      - pillow>=10.0
+      - scikit-learn>=1.7.2
+      - matplotlib>=3.10.0
+      - wandb>=0.17.0
+
+      # Useful for local verification.
+      - pytest>=8.0

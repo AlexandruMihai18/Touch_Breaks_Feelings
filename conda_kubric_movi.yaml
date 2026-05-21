@@ -1,0 +1,12 @@
+name: kubric_movi
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - "tensorflow>=2.16,<2.21"
+      - "tensorflow-datasets>=4.9.0"
+      - "numpy"
+      - "pillow>=10.0"
+      - "tqdm>=4.66"

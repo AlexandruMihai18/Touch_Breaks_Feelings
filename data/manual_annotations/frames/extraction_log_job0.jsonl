@@ -1,0 +1,6 @@
+{"video": "/home/doterog/repos/uva/research/FOMO/touch_from_segmentation/data/manual_annotations/videos/banana.mp4", "frames_saved": 20, "error": null, "total_frames": 506, "elapsed_s": 0.822}
+{"video": "/home/doterog/repos/uva/research/FOMO/touch_from_segmentation/data/manual_annotations/videos/glasses_cover.mp4", "frames_saved": 20, "error": null, "total_frames": 586, "elapsed_s": 0.939}
+{"video": "/home/doterog/repos/uva/research/FOMO/touch_from_segmentation/data/manual_annotations/videos/paper_menu.mp4", "frames_saved": 20, "error": null, "total_frames": 576, "elapsed_s": 0.962}
+{"video": "/home/doterog/repos/uva/research/FOMO/touch_from_segmentation/data/manual_annotations/videos/lamp.mp4", "frames_saved": 20, "error": null, "total_frames": 694, "elapsed_s": 0.976}
+{"video": "/home/doterog/repos/uva/research/FOMO/touch_from_segmentation/data/manual_annotations/videos/tea_cup.mp4", "frames_saved": 20, "error": null, "total_frames": 616, "elapsed_s": 0.492}
+{"video": "/home/doterog/repos/uva/research/FOMO/touch_from_segmentation/data/manual_annotations/videos/water_bottle.mp4", "frames_saved": 20, "error": null, "total_frames": 675, "elapsed_s": 0.414}

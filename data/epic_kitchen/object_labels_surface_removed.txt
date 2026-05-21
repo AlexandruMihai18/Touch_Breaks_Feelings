@@ -1,0 +1,28 @@
+# EPIC-KITCHENS surface-removed object labels
+# 21 categories excluded as architectural surfaces or structural frames
+# These are removed regardless of coverage because their masks span large flat
+# regions with no reliable depth boundary from the hand.
+# sorted by median coverage descending
+#
+#  median     mean      n  name
+   0.7707   0.7254      3  floor
+   0.7621   0.7621      1  window
+   0.6440   0.6440      2  surface
+   0.5557   0.5318      6  table
+   0.4670   0.4670      1  stove top
+   0.4514   0.4436      4  wall
+   0.4291   0.4291      2  kitchen floor
+   0.3988   0.3617     26  counter
+   0.3540   0.3540      1  clothes horse
+   0.2609   0.2609      1  desk
+   0.2525   0.2525      1  shelf
+   0.2405   0.1903      5  oven shelf
+   0.1634   0.1634      2  board
+   0.1544   0.1361      4  top
+   0.1139   0.1167     27  place mat
+   0.0932   0.1001     21  grid
+   0.0663   0.0663      2  base
+   0.0579   0.0516      8  ladder
+   0.0529   0.0529      1  steaming shelf
+   0.0426   0.0615     17  table cloth
+   0.0352   0.0352      1  kitchen

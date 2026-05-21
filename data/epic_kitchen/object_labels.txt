@@ -1,0 +1,941 @@
+# EPIC-KITCHENS / VISOR contact object labels
+# 937 unique names, sorted by contact-frame count
+#
+# count  name
+  3717  knife
+  1703  spoon
+  1379  pan
+  1226  sponge
+  1115  spatula
+  1038  bowl
+   992  chopping board
+   907  tap
+   902  drawer
+   890  plate
+   881  lid
+   818  fork
+   742  cupboard
+   614  onion
+   600  cloth
+   564  pot
+   516  wooden spoon
+   495  fridge
+   472  bag
+   446  water
+   435  glass
+   390  colander
+   344  mug
+   331  garlic
+   328  saucepan
+   320  kettle
+   294  mozzarella
+   291  dough
+   287  cup
+   277  meat
+   275  container
+   269  pepper
+   247  right glove
+   242  sink
+   226  hob
+   225  bottle
+   205  scissors
+   204  clothes
+   201  cucumber
+   199  carrot
+   193  oil bottle
+   190  salt
+   172  glove
+   170  bin/garbage can/recycling bin
+   169  cucumber piece
+   167  peeler
+   164  hob/cooktop/stovetop
+   159  tea towel
+   158  milk bottle
+   157  can
+   157  pak choi
+   156  broccoli
+   150  left glove
+   147  pepper bit/piece
+   146  oven
+   140  frying pan
+   139  jar
+   138  towel
+   137  potato
+   136  chicken thigh
+   126  paper
+   124  aubergine
+   121  box
+   116  tupperware
+   114  tong
+   112  plastic bag
+   112  ladle
+   108  kitchen towel
+   107  cereal box
+   105  chopstick
+   103  courgette
+   103  coffee machine
+   100  cheese
+   100  egg
+    97  teaspoon
+    94  dishwasher
+    91  carrot bit/piece
+    89  flour bag
+    88  rolling pin
+    87  pasta bag
+    86  baking paper
+    84  tray
+    83  spice
+    83  chicken meat
+    82  sieve spatula
+    81  washing up bowl
+    78  tuna patty
+    75  corn
+    75  aeropress
+    74  switch
+    74  mushroom
+    73  bread
+    73  pizza
+    73  sieve
+    73  packaging
+    73  peach
+    73  plastic spatula
+    71  oil
+    71  tomato
+    71  mozzarella package
+    69  cereal bag
+    68  salt bottle
+    67  mozzarella ball
+    67  rag
+    66  ice cube tray
+    65  jug
+    64  baking tray
+    64  tofu piece
+    63  water filter
+    62  broccoli floret
+    61  soy milk
+    60  garlic skin
+    60  saucepan lid
+    58  cutlery
+    58  lemon squeezer piece
+    57  filter
+    57  peel
+    57  parsley
+    56  olive
+    56  microwave
+    56  potato peeler
+    52  sweet potato
+    52  milk
+    51  olive oil bottle
+    51  scale
+    51  chicken
+    49  measuring cup
+    49  grater
+    49  plastic
+    49  bell pepper
+    48  sauce bottle
+    48  chilli
+    47  fish
+    47  package
+    46  washing up liquid
+    46  packet
+    46  garlic clove
+    46  foil
+    46  scourer
+    46  coffee bag
+    46  measuring jug
+    45  flour
+    45  stock cube
+    45  thermometer
+    44  coffee pot
+    44  lime
+    44  passata bottle/tomato puree bottle
+    44  pesto sauce jar
+    43  brush
+    43  onion peel
+    42  tongs
+    42  wok
+    42  glass bowl
+    42  salt container
+    42  lighter
+    42  coffee holder
+    42  mocha pot
+    42  tin
+    42  plastic plate
+    41  cling film
+    41  pot lid
+    41  foil paper
+    40  freezer
+    40  clip
+    40  pasta
+    40  courgette pieces
+    39  mozzarella bag
+    39  rice cooker lid
+    39  yoghurt
+    39  grill
+    39  salami
+    38  rubbish bag
+    38  washing machine
+    38  oat package
+    37  can opener
+    37  banana
+    37  cheese bag
+    37  biscuit packaging
+    37  steamed bun
+    36  tea towel/dish towel
+    36  ginger
+    36  stove
+    36  lunch box
+    35  meat box
+    35  jam jar
+    35  waste
+    34  bread bag
+    34  cap
+    34  rice bag
+    34  place mat
+    34  chicken bone
+    34  spice jar
+    34  garlic press
+    34  oven mitt
+    34  sugar bag
+    33  meat packaging
+    33  wooden spatula
+    32  bottle cap
+    32  olive oil
+    32  knife sharpener
+    31  kitchen roll
+    31  tupperware lid
+    31  bread slice
+    31  butter package
+    31  mesh
+    31  broccoli piece
+    31  pizza base
+    30  mushroom package
+    30  spring onion
+    30  tomato sauce can
+    29  drainer
+    29  parsley package
+    29  pak choi leaf
+    29  sesame oil bottle
+    29  mincing knife
+    28  container lid
+    28  leek
+    28  stock container
+    28  food processor bowl
+    28  pasta package
+    28  salt box
+    28  rice container
+    28  pasta fork
+    28  cooking pot
+    27  counter
+    27  rubbish/trash
+    27  sink strainer
+    27  hummus
+    27  biscuit
+    27  mushroom piece
+    27  meat package
+    27  garlic paste
+    26  eggshell
+    26  bread packet
+    26  water bottle
+    26  water boiler
+    26  coffee jar
+    26  grid
+    26  tub
+    25  bin
+    25  table cloth
+    25  chorizo
+    25  salmon packaging
+    25  cabinet
+    25  tuna mixture
+    24  cheese package
+    24  cheese packet
+    24  oil container
+    24  pitta piece
+    24  wrap
+    24  corn piece
+    24  herb
+    24  salad bowl
+    24  carrot piece
+    24  mushroom tin
+    23  almond drink package
+    23  sausage box
+    23  canned almond package
+    23  egg box
+    23  rolled omelette slice
+    23  lime juicer
+    23  washing powder box
+    23  coriander
+    22  spice container
+    22  soap
+    22  condensed milk tin
+    22  carrot bag
+    22  rice vinegar bottle
+    21  refrigerator
+    21  lettuce
+    21  instruction booklet
+    21  cream cheese container
+    21  cheese container
+    21  food processor cover
+    21  bread packaging
+    21  cheese box
+    21  tomato bottle
+    20  food container
+    20  onion skin
+    20  bottle lid
+    20  green onion
+    20  cereal
+    20  bagel
+    20  salt package
+    20  cleaning spray
+    20  carrot box
+    20  salami packaging
+    20  tomato sauce bottle
+    19  bread package
+    19  celery
+    19  v60/pourover coffee maker
+    19  drying rack
+    19  coffee capsule
+    19  paprika
+    19  rice package
+    19  pan lid
+    19  chocolate dessert
+    19  onion piece
+    19  pasta strainer
+    18  lemon
+    18  soy sauce
+    18  butter
+    18  plastic package
+    18  salad bag
+    18  dish rag
+    18  sugar jar
+    18  turmeric
+    18  cucumber packaging
+    18  soy sauce bottle
+    17  ice cube
+    17  detergent
+    17  sous vide machine
+    17  cupboard door
+    16  plastic wrap
+    16  mushroom box
+    16  fish bag
+    16  microwave door
+    16  washing up liquid/dish soap
+    16  baking paper piece
+    16  coconut milk bottle
+    16  blueberries bag
+    16  yoghurt tub
+    15  cutting board
+    15  plastic container
+    15  chocolate
+    15  vegetable
+    15  stock packaging
+    15  wooden stirrer
+    15  spice bottle
+    15  jar lid
+    15  chopping blade
+    15  coffee maker
+    15  hand blender
+    15  potato slice
+    15  mocha upper part
+    15  coconut bag
+    15  chopped tomato box
+    15  milk container
+    15  gochujang package
+    14  door
+    14  rubbish
+    14  trash
+    14  toaster
+    14  cling film roll
+    14  rice jar
+    14  measuring spoon
+    14  sink plug
+    14  pasta plate
+    14  garbage
+    14  potato bag
+    14  squeezer
+    14  dustpan
+    14  salmon packet
+    14  cooking wine bottle
+    13  rice
+    13  yeast box
+    13  potato skin
+    13  paper towel
+    13  fish piece
+    13  dishwasher drawer
+    13  trash bin
+    13  pepper container
+    13  paper roll
+    13  pitta bread package
+    13  yeast bag
+    13  avocado
+    13  passata bottle
+    13  softener comfort package
+    13  pepper jar
+    13  green bean package
+    13  pepper piece
+    13  carrot peel
+    13  aeropress filter
+    13  yoghurt lid
+    13  foiled dessert
+    13  tomato package
+    13  cheese packaging
+    13  sweet corn
+    13  pork
+    13  broccoli packet
+    13  slicer
+    12  lemon slice
+    12  cafetiere
+    12  cooker temperature
+    12  slotted spoon
+    12  stock
+    12  sheath
+    12  fruit box
+    12  rosemary
+    12  fridge drawer
+    12  kitchen paper
+    12  paneer
+    12  creme fraiche
+    12  stirrer
+    12  black bean sauce
+    12  kale
+    12  coffee cup
+    12  salmon
+    12  pine nut bag
+    12  socket
+    12  paprika package
+    12  chopped tomato tin
+    12  sushi mat
+    12  pen
+    12  flour container
+    12  leek pieces
+    12  cleanser
+    12  rice vinegar
+    12  spicy bean sauce
+    12  jeera package
+    11  rice cooker
+    11  plastic spade
+    11  pea
+    11  freezer drawer
+    11  rice cooker bowl
+    11  food bin
+    11  curry powder package
+    11  coffee filter
+    11  fridge door
+    11  oregano
+    11  tortilla
+    11  onion bag
+    11  recycling bin
+    11  rolled omelette
+    11  oregano bag
+    11  pistachio bag
+    11  sweetcorn can
+    11  cherry bag
+    11  garbage bin
+    11  thyme jar
+    11  bread wrap bag
+    11  gas temperature
+    11  tonic water bottle
+    11  wooden fork
+    11  corkscrew
+    10  yeast
+    10  rice cooker pot
+    10  sandwich
+    10  dishwashing liquid
+    10  food recycling bin
+    10  seal
+    10  minced meat
+    10  tomato tin
+    10  baking powder bottle
+    10  fish skin
+    10  oven tray
+    10  carrot package
+    10  tuna burger
+    10  omelette
+    10  granola
+    10  v60
+    10  chilli jar
+    10  carafe
+    10  onion package
+    10  support
+    10  sugar container
+    10  rack
+    10  meat pack
+     9  tweezers
+     9  food
+     9  foil box
+     9  blueberry
+     9  hamburger bun bag
+     9  ladder
+     9  butter packaging
+     9  oatmeal bag
+     9  cream cheese package
+     9  mayonnaise bottle
+     9  ketchup bottle
+     9  cherry
+     9  cinnamon bottle
+     9  serviette/table napkin
+     9  clip top jar seal
+     9  pizza cutter
+     9  degreaser
+     9  pizza base packaging
+     9  scotch egg box
+     9  gin bottle
+     9  gravy cube
+     9  granola package
+     9  courgette/zucchini
+     9  washing cloth
+     9  olive bottle
+     9  squash/squash drink/juice concentrate
+     9  oven dish
+     9  spicy bean sauce jar
+     9  steamed bun piece
+     9  cardboard
+     9  slicer guard
+     8  leek package
+     8  steamer tray
+     8  kettle wire
+     8  plug
+     8  tofu container
+     8  pitta bread
+     8  chilli bottle
+     8  coffee box
+     8  coffee
+     8  bag clip
+     8  basket
+     8  soy milk bottle
+     8  pesto jar
+     8  dishtowel
+     8  pepper stalk
+     8  peach box
+     8  banana skin
+     8  sesame oil
+     8  red pepper paste package
+     8  fish sauce
+     8  food bin bag
+     8  sun dried tomato
+     8  garlic bag
+     8  stock cube package
+     8  chilli package
+     8  fish sauce bottle
+     8  lime piece
+     8  hummus box
+     8  tube
+     8  tabasco
+     8  wine bottle
+     8  garlic slices
+     8  switch hob
+     8  pizza box
+     7  timer
+     7  pressure pan
+     7  spade
+     7  top
+     7  sticker
+     7  can lid
+     7  tofu box
+     7  pepper container lid
+     7  mocha
+     7  chilli flake bag
+     7  coffee machine lid
+     7  soap dispenser
+     7  vinegar bottle
+     7  coffee filter bag
+     7  rubbish peel
+     7  mushroom bowl
+     7  olive package
+     7  foam
+     7  caper
+     7  yoghurt package
+     7  mocha pot strainer
+     7  tomato packaging
+     7  parmesan
+     7  tea pot
+     7  pepper/salt cellar
+     7  scotch egg box lid
+     7  curry leaf
+     7  turmeric powder bag
+     7  olive oil spray
+     7  cream packaging
+     7  top sticker
+     7  cucumber end
+     7  chili powder package
+     7  cheese bowl
+     7  pesto bottle
+     6  dish washing liquid
+     6  basil plant
+     6  liquid bottle
+     6  white pot
+     6  film
+     6  wrapper
+     6  coaster
+     6  hamburger bun
+     6  pod container
+     6  raisin
+     6  oregano tupperware
+     6  squash bottle
+     6  mixture
+     6  peach slice
+     6  filter holder
+     6  paper bag
+     6  pod
+     6  cleaner
+     6  clip top jar top
+     6  bread wrap
+     6  food bit
+     6  hummus tub
+     6  water jug
+     6  gravy box
+     6  ingredient
+     6  curry leaf bag
+     6  rice bag top
+     6  laundry basket
+     6  stool
+     6  packing bag
+     6  washing liquid bottle
+     5  plastic box
+     5  temperature
+     5  sauce
+     5  table
+     5  hob/stove hob
+     5  honey
+     5  lemon squeezer
+     5  filters package
+     5  coffee container
+     5  packet clip
+     5  bay leaf packet
+     5  sandwich bag
+     5  coffee pod
+     5  dial
+     5  cocoa powder
+     5  empty tin
+     5  onion net
+     5  button
+     5  pesto
+     5  chicken piece
+     5  black pepper
+     5  fat
+     5  peach rind
+     5  cream
+     5  carrot end
+     5  carrot choppings
+     5  pancake
+     5  cake mould
+     5  mozzarella slice
+     5  yoghurt pot
+     5  bacon tray
+     5  envelope
+     5  sugar packet
+     5  garlic bulb
+     5  turmeric jar
+     5  carrot peeling
+     5  grill tray
+     5  gin bottle lid
+     5  chicken box
+     5  milk lid
+     5  steel wool
+     5  spice plastic bag
+     5  crisp
+     5  coconut milk
+     5  egg ramekin
+     5  fabric conditioner bottle
+     5  cucumber slices
+     5  red chilli
+     4  curry
+     4  pepper shaker
+     4  beer
+     4  dust bin
+     4  cover
+     4  plastic pot
+     4  soil bottle
+     4  cooker
+     4  green bag
+     4  candle
+     4  knob
+     4  oil container lid
+     4  coffee jar lid
+     4  oven mitten
+     4  wall
+     4  mixer lid
+     4  washing machine door
+     4  bin lid
+     4  washing liquid
+     4  pepper packet
+     4  package salami
+     4  bit
+     4  onion slice rest
+     4  steel mesh
+     4  phone
+     4  mayonnaise
+     4  vegetable piece
+     4  chop stick
+     4  onion pieces
+     4  dish cloth
+     4  spoon rest
+     4  granola packet
+     4  egg omelette
+     4  scrabber
+     4  pie
+     4  bottle opener
+     4  extractor fan
+     4  nut pasta jar
+     4  nut paste jar
+     4  tomato box
+     4  ginger bag
+     4  rice pot
+     4  packaging bit
+     4  salami packet
+     4  chorizo bag
+     4  leaf skin
+     4  pepper cellar
+     4  mobile
+     4  leftover food
+     4  flour package
+     4  food bag
+     4  cork
+     4  cucumber plastic bag
+     4  mobile/cell phone
+     4  small pan
+     4  pepperoni
+     4  salad package
+     4  salad
+     3  pizza slice
+     3  salted bean curd jar
+     3  pan handle
+     3  ramekin
+     3  fruit
+     3  sausage
+     3  soup
+     3  tea
+     3  floor
+     3  stretch foil
+     3  orange mesh
+     3  coffee mug
+     3  flour box
+     3  vinegar cap
+     3  mitten
+     3  cocoa powder tin
+     3  recycling box
+     3  coffee carafe
+     3  tea bag
+     3  trash bag
+     3  onion peeling
+     3  rice cooker bucket
+     3  sesame roll
+     3  fan
+     3  potato peel
+     3  kitchen roll/paper towel roll
+     3  processor bit
+     3  maple syrup bottle
+     3  honey jar
+     3  clothespin
+     3  chair
+     3  shaker
+     3  oven shelf
+     3  tablet
+     3  tomato piece
+     3  parmesan cheese
+     3  carrot skinner
+     3  bread tupperware
+     3  scotch egg
+     3  chilli flake jar
+     3  pepper bottle
+     3  trash can
+     3  scrap
+     3  ladle rest
+     3  microwave oven
+     3  carton
+     3  jeera bag
+     3  garlic piece
+     3  laundry
+     3  washing powder package
+     3  sweetcorn bag
+     3  springform tin bottom
+     3  other containers
+     3  pot rest
+     3  hand held hoover
+     3  granule
+     3  crisp/chips
+     3  peanut ramekin
+     3  tomato sauce
+     3  sliced garlic
+     3  sliced onion
+     3  cucumber film
+     3  steamer lid
+     3  pork piece
+     3  rubbish bin
+     3  turmeric powder package
+     3  plastic spoon
+     3  peels
+     3  mushroom packaging
+     3  pasta pack
+     2  aubergine end
+     2  basil
+     2  parchment paper
+     2  rice measurer
+     2  chinese vinegar bottle
+     2  water filter lid
+     2  green bean
+     2  bags roll
+     2  tag
+     2  crisp packet
+     2  extractor
+     2  thermometer sheath
+     2  whey
+     2  powder
+     2  v60 cup
+     2  coffee grinder
+     2  hamburger
+     2  roots
+     2  avocado skin
+     2  jam
+     2  chilli bag
+     2  shreddies
+     2  vegetable peeling
+     2  salt cap
+     2  spray
+     2  tissue paper
+     2  chilli oil
+     2  food processor engine
+     2  apron
+     2  can cover
+     2  plastic bowl
+     2  tomato can
+     2  salt jar
+     2  cartoon trash
+     2  broccoli rest
+     2  pine nut
+     2  tissue
+     2  heat
+     2  grinder
+     2  pepper package
+     2  passata
+     2  pepper bit
+     2  wrap package
+     2  colendar
+     2  peach pit
+     2  cookie
+     2  egg bowl
+     2  peeling
+     2  tuna burger underside
+     2  red pepper paste
+     2  olive box
+     2  cylinder
+     2  tool
+     2  metal box
+     2  ice piece
+     2  napkin holder
+     2  cling film package
+     2  transparent bag
+     2  iron packaging
+     2  herb jar
+     2  pepper bits
+     2  pepper top
+     2  gin
+     2  oil bottle lid
+     2  spice cap
+     2  trivet
+     2  pa
+     2  pesto sauce
+     2  red chilli package
+     2  cheese grater
+     2  kitchen floor
+     2  mittens
+     2  board
+     2  squash
+     2  rice vinegar lid
+     2  coriander packet
+     2  electric plug
+     2  hand blender piece
+     2  celery package
+     2  onion bit
+     2  watch
+     2  plastic cup
+     2  cleaning liquid bottle
+     2  cutlery bowl
+     2  liquid soap
+     2  switch extractor fan
+     1  cutlery tray
+     1  salted bean curd
+     1  salted bean curd  jar
+     1  glass lid
+     1  dust
+     1  cooked rice
+     1  electronic pot
+     1  washing up brush
+     1  sock
+     1  butter lid
+     1  garlic peel
+     1  window
+     1  chopped onion
+     1  clear container
+     1  thermometer case
+     1  washing foam
+     1  cheese bit
+     1  nylon
+     1  tomato container
+     1  creme fraiche bottle
+     1  bay leaf
+     1  olive oil cap
+     1  left foot
+     1  laundry pod
+     1  biscuit powder
+     1  wooden chopping board
+     1  mixer
+     1  spring onion root
+     1  stirrer box
+     1  oil bottle cap
+     1  machine
+     1  shelf
+     1  onion peels
+     1  paper towel roll
+     1  plastic cover
+     1  cream cheese
+     1  desk
+     1  white bit
+     1  stalk
+     1  cup lid
+     1  pie dish base
+     1  hand blender motor
+     1  pasta piece
+     1  courgette bit
+     1  cucumber salad
+     1  tuna
+     1  sweet corn can
+     1  four
+     1  wooden tongs
+     1  cow milk
+     1  lemon curd
+     1  clip top jar
+     1  compost bin
+     1  parmesan cheese package
+     1  turmeric  jar
+     1  pizza pan
+     1  rice mug
+     1  surface
+     1  cup board
+     1  teapot strainer
+     1  tea pot lid
+     1  tonic water
+     1  plastic ring
+     1  soap bottle
+     1  slow cooker
+     1  kettle lid
+     1  pizza topping
+     1  steaming shelf
+     1  kitchen
+     1  dish brush
+     1  minced meat package
+     1  hanger
+     1  clothes horse
+     1  salmon package
+     1  peanut
+     1  coriander ramekin
+     1  greaseproof paper
+     1  washing powder
+     1  capsule
+     1  strainer
+     1  cucumber bits
+     1  rice cooker temperature
+     1  metal plate
+     1  sink cap
+     1  stove top
+     1  elastic wrap

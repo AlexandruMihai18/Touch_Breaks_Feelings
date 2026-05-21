@@ -1,0 +1,201 @@
+# EPIC-KITCHENS removed object labels (coverage threshold)
+# 196 non-surface categories with median mask coverage < 0.0050
+# sorted by median coverage descending
+#
+#  median      n  name
+   0.0050     11  wooden fork
+   0.0048     52  olive
+   0.0048     55  potato peeler
+   0.0047     15  bacon
+   0.0047      4  coffee jar lid
+   0.0047     11  coffee cup
+   0.0047     54  chilli
+   0.0046      4  cayenne pepper bottle
+   0.0046      7  coffee machine lid
+   0.0045     20  eggshell
+   0.0045      6  lime piece
+   0.0045     27  hummus
+   0.0045    100  chopstick
+   0.0045      2  tissue
+   0.0045   1308  sponge
+   0.0045      3  chilli flake jar
+   0.0044     10  sachet
+   0.0044      4  cumin bottle
+   0.0044      1  greaseproof paper
+   0.0043     16  spice container
+   0.0043      9  tweezers
+   0.0043      6  tabasco
+   0.0043     20  soap
+   0.0043      1  soap bottle
+   0.0042     22  sun dried tomato
+   0.0042      4  peach rind
+   0.0042     20  sink plug
+   0.0042      1  pod packaging
+   0.0042      7  steamed bun piece
+   0.0042      1  capsule
+   0.0042      3  tomato piece
+   0.0042      7  paprika package
+   0.0041      1  salted bean curd
+   0.0041     11  chocolate
+   0.0041     24  herb
+   0.0041      3  sesame roll
+   0.0041     35  ginger
+   0.0041      4  onion slice rest
+   0.0041      3  carrot skinner
+   0.0040      2  avocado skin
+   0.0040      7  yoghurt package
+   0.0040     26  butter slice
+   0.0040      3  leftover food
+   0.0039      9  pepper container
+   0.0039     18  pine nut
+   0.0039     38  onion peel
+   0.0039     14  coffee capsule
+   0.0039     31  measuring spoon
+   0.0039     12  sheath
+   0.0039      7  hummus box
+   0.0039     37  blackberry
+   0.0039     13  coffee filter
+   0.0039      1  tea pot lid
+   0.0039      8  support
+   0.0039     16  sweetcorn can
+   0.0038      1  turmeric  jar
+   0.0038     48  garlic skin
+   0.0038      3  packet clip
+   0.0038      1  coriander ramekin
+   0.0038      2  blind cord
+   0.0038     41  lime
+   0.0037      1  sink cap
+   0.0037      1  rice mug
+   0.0037      7  tube
+   0.0036      9  cherry
+   0.0036   2065  spoon
+   0.0036      1  cream cheese
+   0.0035     18  lime juicer
+   0.0035      6  garlic slices
+   0.0035     12  cooker temperature
+   0.0035    161  peeler
+   0.0034      1  olive oil cap
+   0.0034      7  mocha pot strainer
+   0.0034   4062  knife
+   0.0034      2  soy sauce bottle lid
+   0.0033      4  pepper/salt cellar
+   0.0032      4  curry
+   0.0032      2  oven switch
+   0.0032     30  stock cube
+   0.0032      5  milk lid
+   0.0031     36  garlic clove
+   0.0030     41  cap
+   0.0030      2  roots
+   0.0030      5  temperature
+   0.0030      3  garlic bulb
+   0.0030      2  switch extractor fan
+   0.0029      8  sesame oil
+   0.0029      8  apple
+   0.0029      1  pepper top
+   0.0028     11  aeropress filter
+   0.0028    254  garlic
+   0.0028     42  clip
+   0.0028      2  cake piece
+   0.0025      3  tool
+   0.0025      7  can lid
+   0.0025     55  lighter
+   0.0025      8  switch hob
+   0.0024      5  olive oil spray
+   0.0024      9  pen
+   0.0024    478  water
+   0.0024      2  oil bottle lid
+   0.0024      2  breadcrumb
+   0.0024      3  scotch egg
+   0.0024      2  v60 cup
+   0.0023      4  lemon squeezer
+   0.0023      2  pesto sauce
+   0.0023     18  tuna mixture
+   0.0023      5  red chilli
+   0.0023   1048  fork
+   0.0023      1  dirty dish
+   0.0022     22  paring knife
+   0.0022      1  cucumber bits
+   0.0022     35  bottle cap
+   0.0022      4  chop stick
+   0.0022      7  clip top jar seal
+   0.0021      7  pepper container lid
+   0.0021     44  lemon squeezer piece
+   0.0021      5  fat
+   0.0021      3  peanut ramekin
+   0.0021      1  bay leaf
+   0.0020      5  stock cube package
+   0.0020      2  garlic peel
+   0.0020      5  pod
+   0.0020      5  gravy cube
+   0.0020      5  carrot end
+   0.0020      1  sponge handle
+   0.0020      4  clothespin
+   0.0019      2  vinegar bottle lid
+   0.0019      8  coffee pod
+   0.0019      3  garlic piece
+   0.0019      4  cork
+   0.0019      2  heat
+   0.0019      5  gin bottle lid
+   0.0018      2  peach pit
+   0.0018      4  scrabber
+   0.0018      7  rubbish peel
+   0.0017      1  courgette bit
+   0.0017      3  spreading knife
+   0.0017      8  lemon slice
+   0.0017     22  bottle lid
+   0.0017     45  scourer
+   0.0017     45  thermometer
+   0.0017      6  filter holder
+   0.0017      1  dish brush
+   0.0016     10  chef knife
+   0.0016      1  cow milk
+   0.0016      2  salt cap
+   0.0016     11  milk bottle lid
+   0.0016      1  folk
+   0.0016      1  nylon
+   0.0016      7  caper
+   0.0015      3  tablet
+   0.0015      2  pepper bit
+   0.0014      3  vinegar cap
+   0.0014      5  steel wool
+   0.0013      2  pepper bits
+   0.0013      5  dial
+   0.0013     10  leek pieces
+   0.0013     10  seal
+   0.0013      2  rice vinegar lid
+   0.0012      3  tea bag
+   0.0012      1  cheese bit
+   0.0012      3  bottle opener
+   0.0012      3  onion peeling
+   0.0012      1  pizza topping
+   0.0012     11  gas temperature
+   0.0012      4  knob
+   0.0011      3  scrap
+   0.0010    106  teaspoon
+   0.0009     80  switch
+   0.0009      5  cucumber end
+   0.0009     12  stirrer
+   0.0008      7  wooden stirrer
+   0.0008      3  onion pieces
+   0.0008      2  thermometer sheath
+   0.0008      1  teabag
+   0.0008      1  thermometer case
+   0.0007      1  stalk
+   0.0007      2  bits
+   0.0007      1  vegetable peeling
+   0.0007      1  plastic ring
+   0.0007      4  vegetable piece
+   0.0007      1  laundry pod
+   0.0006     10  trash
+   0.0006      3  washing up soap
+   0.0006      1  timer button
+   0.0006      5  button
+   0.0005      3  pork piece
+   0.0005      1  white bit
+   0.0004      1  spring onion root
+   0.0004      1  elastic wrap
+   0.0004      6  sticker
+   0.0003      4  oil container lid
+   0.0003      4  bit
+   0.0002      1  pasta piece
+   0.0001      2  ice piece
