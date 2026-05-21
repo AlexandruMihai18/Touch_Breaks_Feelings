@@ -3,13 +3,15 @@ Run the Greatest Hits data pipeline end-to-end.
 
 Steps and their dependencies:
 
-  download          1_download_greatest_hits.sh         (no deps)
-  extract           2_extract_greatest_hits_frames.py   (needs: download)
-  gt-annotations    3_generate_gh_gt_annotations.py       (needs: extract)
+  download          1_download_greatest_hits.sh              (no deps)
+  extract           2_extract_greatest_hits_frames.py        (needs: download)
+  context-frames    2_1_generate_context_frames.py           (needs: extract)
+                    → writes train/val_context_frames.json
+  gt-annotations    3_generate_gh_gt_annotations.py          (needs: extract)
                     → writes train/val annotation JSONs
-  annotate          4_annotate_greatest_hits.py         (needs: extract, GPU)
-  mask-annotations  5_generate_gh_mask_annotations.py     (needs: gt-annotations + annotate)
-  evaluate          6_evaluate_annotation_pipeline.py   (needs: gt-annotations + annotate)
+  annotate          4_annotate_greatest_hits.py              (needs: extract, GPU)
+  mask-annotations  5_generate_gh_mask_annotations.py        (needs: gt-annotations + annotate)
+  evaluate          6_evaluate_annotation_pipeline.py        (needs: gt-annotations + annotate)
 
 Usage
 -----
@@ -39,6 +41,7 @@ _PYTHON = sys.executable
 ALL_STEPS = [
     "download",
     "extract",
+    "context-frames",
     "gt-annotations",
     "annotate",
     "mask-annotations",
@@ -65,6 +68,14 @@ def _cmd(step: str, args: argparse.Namespace) -> list[str]:
             "--output_dir", args.frames_dir,
             "--num_workers", str(args.workers),
             "--skip_processed_videos",
+        ]
+    if step == "context-frames":
+        return [
+            _PYTHON,
+            str(_HERE / "2_1_generate_context_frames.py"),
+            "--data-dir",   args.data_dir,
+            "--frames-dir", args.frames_dir,
+            "--output-dir", args.annotations_dir,
         ]
     if step == "gt-annotations":
         return [
@@ -106,7 +117,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--steps", nargs="+", default=ALL_STEPS, metavar="STEP",
         choices=ALL_STEPS,
-        help=f"Steps to run (default: all). Choices: {', '.join(ALL_STEPS)}",
+        help="Steps to run (default: all). Choices: " + ", ".join(ALL_STEPS),
     )
     p.add_argument(
         "--skip", nargs="+", default=[], metavar="STEP",

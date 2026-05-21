@@ -14,7 +14,7 @@ module purge
 module load 2025
 module load Anaconda3/2025.06-1
 
-cd "$HOME/FOMO/touch_from_segmentation"
+cd "$HOME/Touch_Breaks_Feelings"
 
 conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
 conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r

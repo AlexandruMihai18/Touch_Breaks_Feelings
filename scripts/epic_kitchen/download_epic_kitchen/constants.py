@@ -1,8 +1,11 @@
 from pathlib import Path
 
-VISOR_BASE = "https://data.bris.ac.uk/datasets/2v6cgv1x04ol22qp9rm9x2j6a7"
-ANNO_BASE  = f"{VISOR_BASE}/GroundTruth-SparseAnnotations/annotations"
-FRAME_BASE = f"{VISOR_BASE}/GroundTruth-SparseAnnotations/rgb_frames"
+VISOR_BASE      = "https://data.bris.ac.uk/datasets/2v6cgv1x04ol22qp9rm9x2j6a7"
+ANNO_BASE       = f"{VISOR_BASE}/GroundTruth-SparseAnnotations/annotations"
+FRAME_BASE      = f"{VISOR_BASE}/GroundTruth-SparseAnnotations/rgb_frames"
+
+EK100_VIDEO_BASE = "https://data.bris.ac.uk/datasets/2g1n6qdydwa9u22shpxqzp0t8m"
+EK100_FPS        = 50  # GoPro Hero 7, 50 fps (EK100 paper §3)
 
 # VISOR polygon coordinates are always in 1920×1080 annotation space.
 ANNO_W, ANNO_H = 1920, 1080

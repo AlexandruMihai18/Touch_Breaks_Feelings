@@ -42,6 +42,7 @@ _MASK_FIELDS = [
     ("stick_mask_path",  "_stick.png"),
     ("object_mask_path", "_object.png"),
     ("target_path",      "_touch.png"),
+    ("depth_path",       "_depth.png"),
 ]
 
 

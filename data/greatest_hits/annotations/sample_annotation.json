@@ -1,0 +1,47 @@
+[
+  {
+    "// NOTE": "Main annotation format — produced by running steps 3 → 4 → 5 in order.",
+    "// FIELDS": {
+      "image_path":       "Absolute path to the extracted JPEG frame (in data/greatest_hits/masks/{video_id}/ after step 4).",
+      "audio_path":       "Absolute path to the denoised WAV for this video ({prefix}_denoised.wav). null if file not on disk.",
+      "type":             "'touch' when material is annotated, 'no-touch' otherwise.",
+      "material":         "Surface material label from *_times.txt (e.g. 'ceramic', 'wood'). null for no-touch.",
+      "action":           "Action label from *_times.txt (e.g. 'hit', 'scratch'). null when absent.",
+      "video_id":         "Video folder name — matches data/greatest_hits/frames/{video_id}/.",
+      "frame_idx":        "Integer frame index within the video.",
+      "timestamp_s":      "Event time in seconds as written in *_times.txt.",
+      "stick_mask_path":  "Absolute path to the stick segmentation mask (_stick.png). Added by step 5.",
+      "object_mask_path": "Absolute path to the object segmentation mask (_object.png). Added by step 5.",
+      "target_path":      "Absolute path to the touch mask (_touch.png). Added by step 5.",
+      "depth_path":       "Absolute path to the uint16 grayscale depth PNG (_depth.png). Reload: np.array(Image.open(p)).astype(np.float32) / 65535. Added by step 5."
+    }
+  },
+  {
+    "image_path":       "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/greatest_hits/masks/2015-02-16-16-49-06_denoised/frame_000141.jpg",
+    "audio_path":       "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/greatest_hits/vis-data-256/vis-data-256/2015-02-16-16-49-06_denoised.wav",
+    "type":             "touch",
+    "material":         "ceramic",
+    "action":           "hit",
+    "video_id":         "2015-02-16-16-49-06_denoised",
+    "frame_idx":        141,
+    "timestamp_s":      4.71,
+    "stick_mask_path":  "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/greatest_hits/masks/2015-02-16-16-49-06_denoised/frame_000141_stick.png",
+    "object_mask_path": "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/greatest_hits/masks/2015-02-16-16-49-06_denoised/frame_000141_object.png",
+    "target_path":      "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/greatest_hits/masks/2015-02-16-16-49-06_denoised/frame_000141_touch.png",
+    "depth_path":       "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/greatest_hits/masks/2015-02-16-16-49-06_denoised/frame_000141_depth.png"
+  },
+  {
+    "image_path":       "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/greatest_hits/masks/2015-02-16-16-49-06_denoised/frame_000080.jpg",
+    "audio_path":       "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/greatest_hits/vis-data-256/vis-data-256/2015-02-16-16-49-06_denoised.wav",
+    "type":             "no-touch",
+    "material":         "ceramic",
+    "action":           null,
+    "video_id":         "2015-02-16-16-49-06_denoised",
+    "frame_idx":        80,
+    "timestamp_s":      2.67,
+    "stick_mask_path":  "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/greatest_hits/masks/2015-02-16-16-49-06_denoised/frame_000080_stick.png",
+    "object_mask_path": "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/greatest_hits/masks/2015-02-16-16-49-06_denoised/frame_000080_object.png",
+    "target_path":      "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/greatest_hits/masks/2015-02-16-16-49-06_denoised/frame_000080_touch.png",
+    "depth_path":       "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/greatest_hits/masks/2015-02-16-16-49-06_denoised/frame_000080_depth.png"
+  }
+]

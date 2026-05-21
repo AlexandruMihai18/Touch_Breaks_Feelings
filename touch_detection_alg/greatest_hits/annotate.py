@@ -94,6 +94,7 @@ def annotate_frame(
         "stick_mask_path": str(paths["stick"]),
         "object_mask_path": str(paths["object"]),
         "target_path":     str(paths["touch"]),
+        "depth_path":      str(paths["depth"]),
         "type": "touch" if np.any(touch > 0) else "no-touch",
         "video_id": out_dir.name,
         "material": material,

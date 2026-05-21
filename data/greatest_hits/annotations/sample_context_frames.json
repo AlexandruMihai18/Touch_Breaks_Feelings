@@ -1,0 +1,45 @@
+[
+  {
+    "// NOTE": "Context frames format — produced by step 2_1_generate_context_frames.py.",
+    "// FIELDS": {
+      "image_path":       "Absolute path to the extracted JPEG (in data/greatest_hits/frames/{video_id}/).",
+      "type":             "Always 'no-touch'. These frames are unlabelled temporal neighbours of touch events.",
+      "video_id":         "Video folder name — same as the anchor entry.",
+      "anchor_frame_idx": "Frame index of the touch event this context frame is relative to.",
+      "offset_steps":     "Signed integer step count from the anchor (-4…-1 = before, 1…4 = after).",
+      "offset_s":         "Temporal offset in seconds = offset_steps × --step-seconds (default 0.5 s)."
+    }
+  },
+  {
+    "image_path":       "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/greatest_hits/frames/2015-02-16-16-49-06_denoised/frame_000021.jpg",
+    "type":             "no-touch",
+    "video_id":         "2015-02-16-16-49-06_denoised",
+    "anchor_frame_idx": 141,
+    "offset_steps":     -4,
+    "offset_s":         -2.0
+  },
+  {
+    "image_path":       "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/greatest_hits/frames/2015-02-16-16-49-06_denoised/frame_000096.jpg",
+    "type":             "no-touch",
+    "video_id":         "2015-02-16-16-49-06_denoised",
+    "anchor_frame_idx": 141,
+    "offset_steps":     -1,
+    "offset_s":         -0.5
+  },
+  {
+    "image_path":       "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/greatest_hits/frames/2015-02-16-16-49-06_denoised/frame_000186.jpg",
+    "type":             "no-touch",
+    "video_id":         "2015-02-16-16-49-06_denoised",
+    "anchor_frame_idx": 141,
+    "offset_steps":     1,
+    "offset_s":         0.5
+  },
+  {
+    "image_path":       "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/greatest_hits/frames/2015-02-16-16-49-06_denoised/frame_000261.jpg",
+    "type":             "no-touch",
+    "video_id":         "2015-02-16-16-49-06_denoised",
+    "anchor_frame_idx": 141,
+    "offset_steps":     4,
+    "offset_s":         2.0
+  }
+]

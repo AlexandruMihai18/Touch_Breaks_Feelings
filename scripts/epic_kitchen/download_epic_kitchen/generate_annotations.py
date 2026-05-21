@@ -71,6 +71,11 @@ MASK_EXTS = {".png", ".jpg", ".jpeg"}
 # Matches: {frame_stem}_p{pair_idx}_{hand|object|touch}
 _PAIR_MASK_RE = re.compile(r"^(.+)_p(\d+)_(hand|object|touch)$")
 
+# EK100 frame names: {video_id}_frame_{NNNNNNNNNN}.jpg  (50 fps)
+_FRAME_NUM_RE = re.compile(r"_frame_(\d+)\.")
+_EPIC_FPS     = 50
+_AUDIO_EXT    = "aac"
+
 
 def _has_touch(touch_path: Path) -> bool:
     """Return True if the touch mask contains at least one non-zero pixel."""
@@ -129,11 +134,14 @@ def generate(
     output_dir: str | Path,
     val_frac: float = 0.15,
     seed: int = 42,
+    audio_root: str | Path | None = None,
 ) -> None:
     frames_dir = Path(frames_dir).resolve()
     masks_dir = Path(masks_dir).resolve()
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    if audio_root is not None:
+        audio_root = Path(audio_root)
 
     all_pairs: list[dict] = []
     skipped_no_mask_dir: list[str] = []
@@ -180,6 +188,15 @@ def generate(
                 "video_id": video_id,
                 "object_name": object_name,
             }
+
+            m_num = _FRAME_NUM_RE.search(frame_path.name)
+            if m_num is not None:
+                frame_idx = int(m_num.group(1))
+                entry["frame_idx"] = frame_idx
+                entry["audio_timestamp_sec"] = frame_idx / _EPIC_FPS
+            if audio_root is not None:
+                ap = audio_root / f"{video_id}.{_AUDIO_EXT}"
+                entry["audio_path"] = str(ap) if ap.exists() else ""
 
             all_pairs.append(entry)
 
@@ -253,6 +270,9 @@ def main() -> None:
     p.add_argument("--frames_dir", default=None, help="Root dir with per-video frame subfolders")
     p.add_argument("--masks_dir",  default=None, help="Root dir with per-video mask subfolders")
     p.add_argument("--output_dir", default=None, help="Where to write train.json and val.json")
+    p.add_argument("--audio_root", default=None,
+                   help="Root dir with audio/{video_id}.aac files; adds audio_path + "
+                        "audio_timestamp_sec fields to annotation entries")
     p.add_argument("--val_frac", type=float, default=0.15)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument(
@@ -269,7 +289,8 @@ def main() -> None:
     else:
         if not all([args.frames_dir, args.masks_dir, args.output_dir]):
             p.error("--frames_dir, --masks_dir, and --output_dir are required unless --ctx-only is set")
-        generate(args.frames_dir, args.masks_dir, args.output_dir, args.val_frac, args.seed)
+        generate(args.frames_dir, args.masks_dir, args.output_dir,
+                 args.val_frac, args.seed, audio_root=args.audio_root)
 
 
 if __name__ == "__main__":

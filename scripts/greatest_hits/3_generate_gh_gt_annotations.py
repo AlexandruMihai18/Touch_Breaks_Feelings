@@ -8,11 +8,13 @@ Reads *_times.txt labels and extracted frame paths, then writes:
 
 Annotation entry fields:
     image_path   : absolute path to the JPEG frame
+    audio_path   : absolute path to the denoised WAV for this video
     type         : "touch" | "no-touch"  (material is not None → touch)
     material     : material label or null
     action       : action label (e.g. "hit", "scratch") or null
     video_id     : folder name (e.g. "2015-03-28-19-34-13_denoised")
     frame_idx    : integer frame index
+    timestamp_s  : event time in seconds within the video
 
 Mask paths are absent at this stage — run generate_gh_mask_annotations.py
 after 4_annotate_greatest_hits.py to add them.
@@ -107,6 +109,8 @@ def build(data_dir: Path, frames_dir: Path) -> list[dict]:
         frame_dir = frames_dir / video_id
         fps, total = _fps_and_total(mp4)
         annotations = _parse_times(times_path)
+        audio_path = data_dir / f"{prefix}_denoised.wav"
+        audio_str = str(audio_path.resolve()) if audio_path.exists() else None
 
         seen: set[int] = set()
         for ann in annotations:
@@ -121,12 +125,14 @@ def build(data_dir: Path, frames_dir: Path) -> list[dict]:
                 continue
 
             anno_entries.append({
-                "image_path": str(frame_path.resolve()),
-                "type":       "touch" if ann["material"] is not None else "no-touch",
-                "material":   ann["material"],
-                "action":     ann["action"],
-                "video_id":   video_id,
-                "frame_idx":  idx,
+                "image_path":  str(frame_path.resolve()),
+                "audio_path":  audio_str,
+                "type":        "touch" if ann["material"] is not None else "no-touch",
+                "material":    ann["material"],
+                "action":      ann["action"],
+                "video_id":    video_id,
+                "frame_idx":   idx,
+                "timestamp_s": ann["timestamp_s"],
             })
 
     if missing:
