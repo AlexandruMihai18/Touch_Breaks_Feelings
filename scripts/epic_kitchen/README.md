@@ -42,6 +42,31 @@ HTTP endpoint — the full video is never written to disk. Requires `ffmpeg` on 
 
 ---
 
+### `download_audio.py`
+
+Standalone Phase 6 re-runner. Discovers video IDs from the `frames/` directory and
+stream-extracts audio for any `.aac` files not yet on disk. Safe to re-run — already
+present files are skipped.
+
+```bash
+# All videos found under data/epic_kitchen/frames/
+python scripts/epic_kitchen/download_audio.py
+
+# Specific videos only
+python scripts/epic_kitchen/download_audio.py --video-ids P01_01 P01_103
+
+# Custom data/audio directories
+python scripts/epic_kitchen/download_audio.py \
+    --data-dir ./data/epic_kitchen \
+    --audio-dir ./data/epic_kitchen/audio
+```
+
+SLURM: `jobs/epic_kitchen/download_audio.sh` (supports `--video-ids` passthrough via `"$@"`).
+
+**When:** After phases 1–3 (frames on disk), if audio was skipped or partially failed.
+
+---
+
 ### `refine_touch_masks.py`  *(GPU)*
 
 Runs Depth-Anything-V2 + optional guided image filter on every annotated frame and writes
