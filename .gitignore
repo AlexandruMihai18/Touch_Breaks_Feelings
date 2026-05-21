@@ -20,6 +20,8 @@ prepared_data/
 !**/data/**/object_labels_removed.txt
 !**/data/**/object_labels_coverage.txt
 !**/data/**/object_labels_surface_removed.txt
+!**/data/**/sample_annotation.json
+!**/data/**/sample_context_frames.json
 **/data/**/*.wav
 **/data/**/*.zip
 

@@ -1,0 +1,48 @@
+[
+  {
+    "// NOTE": "Main annotation format — produced by generate_annotations.py (phase 5) then enriched by refine_touch_masks.py.",
+    "// FIELDS": {
+      "image_path":           "Absolute path to the JPEG frame (in data/epic_kitchen/frames/{video_id}/).",
+      "hand_mask_path":       "Absolute path to the hand segmentation mask ({stem}_p{n}_hand.png).",
+      "object_mask_path":     "Absolute path to the object segmentation mask ({stem}_p{n}_object.png).",
+      "target_path":          "Absolute path to the original touch mask ({stem}_p{n}_touch.png). Legacy field name kept for compatibility.",
+      "touch_mask_path":      "Same as target_path — normalised field name added by refine_touch_masks.py.",
+      "type":                 "'touch' or 'no-touch'.",
+      "video_id":             "EPIC-Kitchens video ID (e.g. 'P01_05').",
+      "object_name":          "Name of the object being interacted with. Empty string or null for no-touch entries.",
+      "frame_idx":            "Integer frame number extracted from the filename (e.g. P01_05_frame_0000009754 → 9754). Added by generate_annotations.py.",
+      "audio_timestamp_sec":  "Time of the frame within the video in seconds = frame_idx / 50 (EK100 is 50 fps). Added by generate_annotations.py.",
+      "audio_path":           "Absolute path to the per-video AAC audio track (data/epic_kitchen/audio/{video_id}.aac). Empty string if not yet downloaded (run phase 6). Added by generate_annotations.py when --audio_root is set.",
+      "depth_path":           "Absolute path to the uint16 grayscale depth PNG ({stem}_p{n}_depth.png). Reload: np.array(Image.open(p)).astype(np.float32) / 65535. Added by refine_touch_masks.py.",
+      "// refined mask":      "The refined touch mask ({stem}_p{n}_touch_refined.png) is written alongside the other masks but is not yet a tracked annotation field."
+    }
+  },
+  {
+    "image_path":          "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/epic_kitchen/frames/P01_05/P01_05_frame_0000009754.jpg",
+    "hand_mask_path":      "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/epic_kitchen/masks/P01_05/P01_05_frame_0000009754_p0_hand.png",
+    "object_mask_path":    "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/epic_kitchen/masks/P01_05/P01_05_frame_0000009754_p0_object.png",
+    "target_path":         "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/epic_kitchen/masks/P01_05/P01_05_frame_0000009754_p0_touch.png",
+    "touch_mask_path":     "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/epic_kitchen/masks/P01_05/P01_05_frame_0000009754_p0_touch.png",
+    "type":                "touch",
+    "video_id":            "P01_05",
+    "object_name":         "chopping board",
+    "frame_idx":           9754,
+    "audio_timestamp_sec": 195.08,
+    "audio_path":          "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/epic_kitchen/audio/P01_05.aac",
+    "depth_path":          "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/epic_kitchen/masks/P01_05/P01_05_frame_0000009754_p0_depth.png"
+  },
+  {
+    "image_path":          "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/epic_kitchen/frames/P01_01/P01_01_frame_0000093306.jpg",
+    "hand_mask_path":      "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/epic_kitchen/masks/P01_01/P01_01_frame_0000093306_p0_hand.png",
+    "object_mask_path":    "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/epic_kitchen/masks/P01_01/P01_01_frame_0000093306_p0_object.png",
+    "target_path":         "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/epic_kitchen/masks/P01_01/P01_01_frame_0000093306_p0_touch.png",
+    "touch_mask_path":     "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/epic_kitchen/masks/P01_01/P01_01_frame_0000093306_p0_touch.png",
+    "type":                "no-touch",
+    "video_id":            "P01_01",
+    "object_name":         "",
+    "frame_idx":           93306,
+    "audio_timestamp_sec": 1866.12,
+    "audio_path":          "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/epic_kitchen/audio/P01_01.aac",
+    "depth_path":          "/home/doterog/repos/uva/research/Touch_Breaks_Feelings/data/epic_kitchen/masks/P01_01/P01_01_frame_0000093306_p0_depth.png"
+  }
+]
