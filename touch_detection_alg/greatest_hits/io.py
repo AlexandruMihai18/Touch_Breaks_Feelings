@@ -6,7 +6,6 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from touch_detection_alg.depth import colorize_depth
 
 
 def load_touch_materials(annotations_dir: Path, video_id: str) -> dict[int, str]:
@@ -50,7 +49,7 @@ def save_frame_output(
     Image.fromarray((touch > 0).astype(np.uint8) * 255, mode="L").save(paths["touch"])
     Image.fromarray((obj_mask > 0).astype(np.uint8) * 255, mode="L").save(paths["object"])
     Image.fromarray((stick_mask > 0).astype(np.uint8) * 255, mode="L").save(paths["stick"])
-    Image.fromarray(colorize_depth(depth_map)).save(paths["depth"])
+    Image.fromarray((depth_map * 65535).astype(np.uint16)).save(paths["depth"])
     Image.fromarray(frame).save(paths["image"], quality=95)
     return paths
 
