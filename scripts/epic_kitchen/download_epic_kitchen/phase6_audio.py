@@ -13,8 +13,8 @@ import urllib.request
 from .constants import EK100_VIDEO_BASE, EK55_VIDEO_BASE
 from .failure_log import FailureLog
 
-_AUDIO_EXT     = "aac"
-_FFMPEG_TIMEOUT = 300  # seconds per video
+_AUDIO_EXT      = "aac"
+_FFMPEG_TIMEOUT = 3600  # seconds per video — EK100 videos run up to ~30 min; ffmpeg ~2× realtime
 
 
 def audio_path_for(video_id: str, audio_root: Path) -> Path:
