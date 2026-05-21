@@ -1,74 +1,49 @@
 import json
+import pandas as pd
 
 def _load_epic_kitchens_data():
-    EPIC_KITCHEN_ANNOTATIONS_PATH = './data/epic_kitchen/annotations/annotations.json'
-    data = dict(
-        image_paths=[],
-        audio_paths=[],
-        labels=[],
-        video_ids=[],
-        frame_ids=[],
-        touch_times=[]
-    )
-
-    with open(EPIC_KITCHEN_ANNOTATIONS_PATH, 'r') as f:
-        uncurated_data = json.load(f)
-        for image_data in uncurated_data:
-            data['image_paths'].append(image_data['image_path'])
-            data['audio_paths'].append(image_data['audio_path'])
-            data['labels'].append(1 if image_data['type'] == 'touch' else 0)
-            data['video_ids'].append(image_data['video_id'])
-            data['frame_ids'].append(image_data['frame_idx'])
-            data['touch_times'].append(image_data['audio_timestamp_sec'])
-
-    return data
+    path = './data/epic_kitchen/annotations/val.json'
+    
+    df = pd.read_json(path)
+    
+    return {
+        'image_paths': df['image_path'].tolist(),
+        'audio_paths': df['audio_path'].tolist(),
+        'labels':      (df['type'] == 'touch').astype(int).tolist(), # Vectorized mapping
+        'video_ids':   df['video_id'].tolist(),
+        'frame_ids':   df['frame_idx'].tolist(),
+        'touch_times': df['audio_timestamp_sec'].tolist()
+    }
 
 def _load_greatest_hits_data():
-    GREATEST_HITS_ANNOTATIONS_PATH = './data/greatest_hits/annotations/annotations.json'
-    data = dict(
-        image_paths=[],
-        audio_paths=[],
-        labels=[],
-        video_ids=[],
-        frame_ids=[],
-        touch_times=[]
-    )
-
-    with open(GREATEST_HITS_ANNOTATIONS_PATH, 'r') as f:
-        uncurated_data = json.load(f)
-        for image_data in uncurated_data:
-            data['image_paths'].append(image_data['image_path'])
-            data['audio_paths'].append(image_data['audio_path'])
-            data['labels'].append(1 if image_data['type'] == 'touch' else 0)
-            data['video_ids'].append(image_data['video_id'])
-            data['frame_ids'].append(image_data['frame_idx'])
-            data['touch_times'].append(image_data['timestamp_s'])
-
-    return data
+    path = './data/greatest_hits/annotations/annotations.json'
+    
+    df = pd.read_json(path)
+    
+    return {
+        'image_paths': df['image_path'].tolist(),
+        'audio_paths': df['audio_path'].tolist(),
+        'labels':      (df['type'] == 'touch').astype(int).tolist(),
+        'video_ids':   df['video_id'].tolist(),
+        'frame_ids':   df['frame_idx'].tolist(),
+        'touch_times': df['timestamp_s'].tolist()  # The specific key for Greatest Hits
+    }
 
 def _load_sven_data():
-    SVEN_ANNOTATIONS_PATH = './data/sven/annotations/annotations.json'
-    data = dict(
-        image_paths=[],
-        labels=[],
-        video_ids=[],
-        frame_ids=[],
-        touch_times=[]
-    )
-
-    with open(SVEN_ANNOTATIONS_PATH, 'r') as f:
-        uncurated_data = json.load(f)
-        for image_data in uncurated_data:
-            data['image_paths'].append(image_data['image_path'])
-            data['labels'].append(1 if image_data['type'] == 'touch' else 0)
-            data['video_ids'].append(image_data['video_id'])
-            data['frame_ids'].append(image_data['frame_idx'])
-            data['touch_times'].append(image_data['timestamp_s'])
-
-    return data
+    path = './data/sven/annotations/annotations.json'
+    
+    df = pd.read_json(path)
+    
+    return {
+        'image_paths': df['image_path'].tolist(),
+        'labels':      (df['type'] == 'touch').astype(int).tolist(),
+        'video_ids':   df['video_id'].tolist(),
+        'frame_ids':   df['frame_idx'].tolist(),
+        'touch_times': df['timestamp_s'].tolist()  # The specific key for Sven
+    }
 
 def load_data(dataset_name: str):
-    if dataset_name == "EpicKitchens":
+    if dataset_name == "EpicKitchen":
         data = _load_epic_kitchens_data()
     elif dataset_name == "GreatestHits":
         data = _load_greatest_hits_data()

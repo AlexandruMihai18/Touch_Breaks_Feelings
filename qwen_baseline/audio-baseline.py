@@ -81,7 +81,7 @@ def predict_touch_times_for_audio(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Audio-based touch detection baseline")
-    parser.add_argument("--dataset", type=str, required=True, help="Name of the dataset", choices=["EpicKitchens", "GreatestHits"])
+    parser.add_argument("--dataset", type=str, required=True, help="Name of the dataset", choices=["EpicKitchen", "GreatestHits"])
 
     args = parser.parse_args()
 
@@ -90,9 +90,9 @@ if __name__ == "__main__":
     processor = AutoProcessor.from_pretrained(AUDIO_MODEL_ID)
     model = Qwen2AudioForConditionalGeneration.from_pretrained(AUDIO_MODEL_ID).cuda()
 
-    audio_paths = data["audio_paths"].tolist()
-    video_ids = data["video_ids"].tolist()
-    touch_times = data["touch_times"].tolist()
+    audio_paths = data["audio_paths"]
+    video_ids = data["video_ids"]
+    touch_times = data["touch_times"]
 
     predicted_touch_times = []
 

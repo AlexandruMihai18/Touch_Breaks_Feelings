@@ -4,7 +4,7 @@ import torch
 
 from PIL import Image
 from qwen_baseline_utils import load_data
-from transformers import AutoModelForCausalLM, AutoProcessor
+from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
 
 VISUAL_MODEL_ID = 'Qwen/Qwen2.5-VL-7B-Instruct'
 VISUAL_PROMPT_WITHOUT_AUDIO = """
@@ -99,13 +99,13 @@ if __name__ == "__main__":
     data = load_data(args.dataset)
 
     processor = AutoProcessor.from_pretrained(VISUAL_MODEL_ID)
-    model = AutoModelForCausalLM.from_pretrained(VISUAL_MODEL_ID)
+    model = Qwen2_5_VLForConditionalGeneration.from_pretrained(VISUAL_MODEL_ID)
 
     predictions = []
     points_of_touch = []
 
-    image_paths = data['image_paths'].tolist()
-    labels = data['labels'].tolist()
+    image_paths = data['image_paths']
+    labels = data['labels']
 
     for image_path, label in zip(image_paths, labels):
         prediction = process_image_without_audio(image_path, processor, model)
@@ -126,8 +126,8 @@ if __name__ == "__main__":
         'audio_path': data['audio_paths'],
         'label': data['labels'],
         'prediction': predictions,
-        'x_touch': [pt[0] for pt in points_of_touch],
-        'y_touch': [pt[1] for pt in points_of_touch],
+        'x_touch': [pt[0] if pt else None for pt in points_of_touch],
+        'y_touch': [pt[1] if pt else None for pt in points_of_touch],
     })
 
     results.to_csv(f'results/{args.dataset}_qwen2.5_visual_baseline_predictions.csv', index=False)

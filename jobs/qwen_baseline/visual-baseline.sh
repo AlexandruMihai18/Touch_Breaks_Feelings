@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --partition=gpu_mig
+#SBATCH --partition=gpu_h100
 #SBATCH --gpus=1
 #SBATCH --job-name=visual-baseline
 #SBATCH --ntasks=1
@@ -19,5 +19,5 @@ source activate touch_from_segmentation
 
 cd "$HOME/Touch_Breaks_Feelings"
 
-python qwen_baseline.visual-baseline.py --dataset EpicKitchen
-python qwen_baseline.visual-baseline.py --dataset GreatestHits
+python qwen_baseline/visual-baseline.py --dataset EpicKitchen
+python qwen_baseline/visual-baseline.py --dataset GreatestHits
