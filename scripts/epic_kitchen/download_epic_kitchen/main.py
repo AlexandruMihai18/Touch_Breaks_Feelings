@@ -10,6 +10,7 @@ from .phase2_catalog import build_catalog, select_frames, stratified_sample
 from .phase3_frames import count_on_disk, download_frames
 from .phase4_masks import render_all_masks
 from .phase5_generate import run_generate_annotations
+from .phase6_audio import download_audio
 from .verify_epic_kitchen import verify
 
 _DESCRIPTION = """\
@@ -20,13 +21,17 @@ Phases:
   2. Parse annotations → build contact / no-contact catalog; select frames
   3. Download sampled frames from per-video ZIPs via HTTP range requests
   4. Render VISOR polygon segments → binary hand / object / touch masks
-  5. Run generate_annotations.py → annotations/train.json + val.json
+  5. Generate train/val annotation JSONs (includes audio_timestamp_sec)
+  6. Stream-extract audio from EK100 videos via ffmpeg (no video stored)
+
+  Execution order: 1 → 2 → 3 → 4 → 6 → 5  (audio before annotation gen)
 
 Output layout:
   <output_dir>/
   ├── visor/GroundTruth-SparseAnnotations/annotations/{split}/
   ├── frames/{video_id}/{frame_name}.jpg
   ├── masks/{video_id}/{stem}_{hand|object|touch}.png
+  ├── audio/{video_id}.aac
   ├── annotations/{train|val}.json
   └── failures.json
 """
@@ -59,9 +64,13 @@ def parse_args():
                    help="Path to failure log (default: <output_dir>/failures.json)")
     p.add_argument("--dry-run",          action="store_true",
                    help="Parse + select only; skip download and mask rendering")
-    p.add_argument("--skip-annotations", action="store_true",
+    p.add_argument("--skip-audio",        action="store_true",
+                   help="Skip Phase 6 (audio extraction)")
+    p.add_argument("--audio-dir",         default=None,
+                   help="Where to store .aac files (default: <output_dir>/audio)")
+    p.add_argument("--skip-annotations",  action="store_true",
                    help="Skip Phase 5 (generate_annotations.py)")
-    p.add_argument("--skip-verify", action="store_true",
+    p.add_argument("--skip-verify",       action="store_true",
                    help="Skip post-download verification check")
     return p.parse_args()
 
@@ -77,6 +86,7 @@ def main():
     anno_dir    = out / "visor" / "GroundTruth-SparseAnnotations" / "annotations" / args.split
     frames_root = out / "frames"
     masks_root  = out / "masks"
+    audio_root  = Path(args.audio_dir) if args.audio_dir else out / "audio"
 
     if args.match_no_contact:
         mode_str = "all contact  →  match no-contact to successful downloads"
@@ -90,6 +100,7 @@ def main():
     print(f"  participants : {'ALL' if args.all_participants else participants}")
     print(f"  split        : {args.split}")
     print(f"  mode         : {mode_str}")
+    print(f"  audio        : {'skip' if args.skip_audio else audio_root}")
     print(f"  output       : {out}")
     print(f"  failure log  : {failure_log_path}")
     print("=" * 68)
@@ -144,10 +155,18 @@ def main():
     print("\n── Phase 4: Render masks ───────────────────────────────────────────")
     render_all_masks(sampled, frames_root, masks_root, args.workers, flog)
 
+    # Phase 6
+    if not args.skip_audio:
+        print("\n── Phase 6: Extract audio from EK100 videos ────────────────────────")
+        download_audio(sampled, audio_root, flog)
+
     # Phase 5
     if not args.skip_annotations:
         print("\n── Phase 5: Generate train/val annotation JSONs ────────────────────")
-        run_generate_annotations(out, args.val_frac)
+        run_generate_annotations(
+            out, args.val_frac,
+            audio_root=None if args.skip_audio else audio_root,
+        )
 
     flog.flush()
     print("\n── Failure summary ─────────────────────────────────────────────────")
@@ -167,8 +186,9 @@ def main():
   │   ├── {{stem}}_hand.png
   │   ├── {{stem}}_object.png
   │   └── {{stem}}_touch.png
+  ├── audio/{{video_id}}.aac
   ├── annotations/
-  │   ├── train.json
+  │   ├── train.json   (includes audio_path + audio_timestamp_sec)
   │   └── val.json
   └── failures.json
 
