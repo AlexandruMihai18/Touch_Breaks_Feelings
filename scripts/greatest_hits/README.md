@@ -35,6 +35,25 @@ python scripts/greatest_hits/2_extract_greatest_hits_frames.py \
 
 ---
 
+### `2_1_generate_context_frames.py`
+
+Samples 4 temporal context frames before and 4 after each touch event, each separated by 0.5 s. Reads `*_times.txt` and split files directly (no annotation JSONs needed), so it can run immediately after frame extraction.
+
+Writes per-split context JSON files:
+
+- `annotations/train_context_frames.json`
+- `annotations/val_context_frames.json`
+
+Each entry records the extracted frame path, which anchor it relates to (`anchor_frame_idx`), and the temporal offset (`offset_steps`, `offset_s`). All entries have `type: "no-touch"`.
+
+```bash
+python scripts/greatest_hits/2_1_generate_context_frames.py
+```
+
+**When:** After `2_extract_greatest_hits_frames.py`. No GPU needed. Safe to resume — skips already-extracted frames by default.
+
+---
+
 ### `3_generate_gh_gt_annotations.py`
 
 Reads `*_times.txt` labels and extracted frame paths in a single pass and writes:
@@ -121,6 +140,8 @@ python scripts/greatest_hits/run_pipeline.py --dry-run
 1_download_greatest_hits.sh
         ↓
 2_extract_greatest_hits_frames.py
+        ↓
+2_1_generate_context_frames.py    ← no-touch context frames for binary classification
         ↓
 3_generate_gh_gt_annotations.py   ← writes metadata.csv + train/val JSON (GT labels, no masks)
         ↓
