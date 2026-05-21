@@ -191,7 +191,9 @@ def generate(
 
             m_num = _FRAME_NUM_RE.search(frame_path.name)
             if m_num is not None:
-                entry["audio_timestamp_sec"] = int(m_num.group(1)) / _EPIC_FPS
+                frame_idx = int(m_num.group(1))
+                entry["frame_idx"] = frame_idx
+                entry["audio_timestamp_sec"] = frame_idx / _EPIC_FPS
             if audio_root is not None:
                 ap = audio_root / f"{video_id}.{_AUDIO_EXT}"
                 entry["audio_path"] = str(ap) if ap.exists() else ""
