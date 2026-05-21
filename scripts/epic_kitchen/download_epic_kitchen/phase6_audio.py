@@ -8,7 +8,9 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from .constants import EK100_VIDEO_BASE
+import urllib.request
+
+from .constants import EK100_VIDEO_BASE, EK55_VIDEO_BASE
 from .failure_log import FailureLog
 
 _AUDIO_EXT     = "aac"
@@ -19,9 +21,33 @@ def audio_path_for(video_id: str, audio_root: Path) -> Path:
     return audio_root / f"{video_id}.{_AUDIO_EXT}"
 
 
+def _is_ek55(video_id: str) -> bool:
+    """Return True for EK55 video IDs (2-digit suffix, e.g. P01_01).
+
+    EK100-only videos use a 3-digit suffix (P01_101+).  Both appear in VISOR
+    annotations but live on different HTTP servers.
+    """
+    suffix = video_id.split("_", 1)[-1]
+    return len(suffix) <= 2
+
+
 def _video_url(video_id: str) -> str:
     pid = video_id[:3]  # e.g. "P01"
-    return f"{EK100_VIDEO_BASE}/{pid}/videos/{video_id}.MP4"
+    if not _is_ek55(video_id):
+        return f"{EK100_VIDEO_BASE}/{pid}/videos/{video_id}.MP4"
+    # EK55 videos are split across train/ and test/ on a separate server.
+    for split in ("train", "test"):
+        url = f"{EK55_VIDEO_BASE}/videos/{split}/{pid}/{video_id}.MP4"
+        try:
+            req = urllib.request.Request(url, method="HEAD")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                if resp.status == 200:
+                    return url
+        except Exception:
+            continue
+    # Return the train URL as a best-effort fallback (ffmpeg will fail with a
+    # useful error rather than silently returning a wrong result).
+    return f"{EK55_VIDEO_BASE}/videos/train/{pid}/{video_id}.MP4"
 
 
 def _audio_ok(path: Path) -> bool:

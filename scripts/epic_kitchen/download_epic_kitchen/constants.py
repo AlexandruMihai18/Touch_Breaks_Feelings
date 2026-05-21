@@ -5,6 +5,7 @@ ANNO_BASE       = f"{VISOR_BASE}/GroundTruth-SparseAnnotations/annotations"
 FRAME_BASE      = f"{VISOR_BASE}/GroundTruth-SparseAnnotations/rgb_frames"
 
 EK100_VIDEO_BASE = "https://data.bris.ac.uk/datasets/2g1n6qdydwa9u22shpxqzp0t8m"
+EK55_VIDEO_BASE  = "https://data.bris.ac.uk/datasets/3h91syskeag572hl6tvuovwv4d"
 EK100_FPS        = 50  # GoPro Hero 7, 50 fps (EK100 paper §3)
 
 # VISOR polygon coordinates are always in 1920×1080 annotation space.
