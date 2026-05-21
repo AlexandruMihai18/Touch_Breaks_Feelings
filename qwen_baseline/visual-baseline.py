@@ -104,13 +104,14 @@ if __name__ == "__main__":
     predictions = []
     points_of_touch = []
 
-    image_paths = data['frame_paths'].tolist()
+    image_paths = data['image_paths'].tolist()
+    labels = data['labels'].tolist()
 
-    for image_path in image_paths:
+    for image_path, label in zip(image_paths, labels):
         prediction = process_image_without_audio(image_path, processor, model)
         point_of_touch = identify_point_of_touch(image_path, processor, model)
 
-        if prediction == 0:
+        if prediction == 0 and label == 0:
             point_of_touch = None
 
         predictions.append(prediction)
@@ -121,7 +122,7 @@ if __name__ == "__main__":
     results = pd.DataFrame({
         'frame_id': data['frame_ids'],
         'video_id': data['video_ids'],
-        'frame_path': data['frame_paths'],
+        'frame_path': data['image_paths'],
         'audio_path': data['audio_paths'],
         'label': data['labels'],
         'prediction': predictions,
@@ -129,5 +130,5 @@ if __name__ == "__main__":
         'y_touch': [pt[1] for pt in points_of_touch],
     })
 
-    results.to_csv(f'{args.dataset}_qwen2.5_visual_baseline_predictions.csv', index=False)
+    results.to_csv(f'results/{args.dataset}_qwen2.5_visual_baseline_predictions.csv', index=False)
 

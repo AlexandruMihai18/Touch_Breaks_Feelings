@@ -1,5 +1,6 @@
 import argparse
 import librosa
+import pandas as pd
 
 from qwen_baseline_utils import load_data
 from transformers import AutoProcessor, Qwen2AudioForConditionalGeneration
@@ -22,6 +23,20 @@ Rules:
 Example of a valid output:
 Response: [0.3245, 1.1567, 2.4089, 5.8101]
 """
+
+TOLERANCE = 0.1
+
+def generate_predicted_labels(predicted_touch_times, touch_times):
+    predicted_labels = []
+    
+    for pred_times, true_times in zip(predicted_touch_times, touch_times):
+        for true_time in true_times:
+            if any(abs(pred_time - true_time) <= TOLERANCE for pred_time in pred_times):
+                predicted_labels.append(1)
+            else:
+                predicted_labels.append(0)
+    
+    return predicted_labels
 
 def predict_touch_times_for_audio(
     audio_path: str,
@@ -53,7 +68,6 @@ def predict_touch_times_for_audio(
     response = processor.decode(generated_tokens, skip_special_tokens=True).strip()
     print(f"Model response: {response}")
 
-    # 4. Parse the array directly (Notice it outputs just the array now based on your debug log)
     if response:
         try:
             if response.startswith("Response:"):
@@ -76,7 +90,26 @@ if __name__ == "__main__":
     processor = AutoProcessor.from_pretrained(AUDIO_MODEL_ID)
     model = Qwen2AudioForConditionalGeneration.from_pretrained(AUDIO_MODEL_ID).cuda()
 
-    audio_paths = data["audio_path"].tolist()
-    video_ids = data["video_id"].tolist()
+    audio_paths = data["audio_paths"].tolist()
+    video_ids = data["video_ids"].tolist()
+    touch_times = data["touch_times"].tolist()
 
-    ### TODO TODO
+    predicted_touch_times = []
+
+    for audio_path in audio_paths:
+        predicted_times = predict_touch_times_for_audio(audio_path, processor, model)
+        predicted_touch_times.append(predicted_times)
+
+    predicted_labels = generate_predicted_labels(predicted_touch_times, touch_times)
+
+    results = pd.DataFrame({
+        'frame_id': data['frame_ids'],
+        'video_id': data['video_ids'],
+        'frame_path': data['image_paths'],
+        'audio_path': data['audio_paths'],
+        'label': data['labels'],
+        'prediction': predicted_labels,
+        'x_touch': [None] * len(predicted_labels),
+        'y_touch': [None] * len(predicted_labels),
+    })
+
