@@ -20,7 +20,7 @@ module load Anaconda3/2025.06-1
 
 source activate touch_from_segmentation
 
-cd "$HOME/FOMO/touch_from_segmentation"
+cd "$HOME/Touch_Breaks_Feelings"
 
 python scripts/epic_kitchen/evaluate_refined_masks.py \
     --splits train val \

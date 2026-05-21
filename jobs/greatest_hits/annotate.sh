@@ -23,7 +23,7 @@ module load Anaconda3/2025.06-1
 
 source activate touch_from_segmentation
 
-cd "$HOME/FOMO/touch_from_segmentation"
+cd "$HOME/Touch_Breaks_Feelings"
 
 python scripts/greatest_hits/4_annotate_greatest_hits.py \
     --dilation 10 \

@@ -25,7 +25,7 @@ module load Anaconda3/2025.06-1
 
 source activate touch_from_segmentation
 
-cd "$HOME/FOMO/touch_from_segmentation"
+cd "$HOME/Touch_Breaks_Feelings"
 
 MASKS_DIR="data/greatest_hits/masks"
 ANNO_DIR="data/greatest_hits/annotations"
