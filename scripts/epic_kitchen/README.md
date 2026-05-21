@@ -1,6 +1,6 @@
 # EPIC Kitchen Scripts
 
-Scripts for building and maintaining the EPIC Kitchen touch-mask dataset. Run all from `touch_from_segmentation/`.
+Scripts for building and maintaining the EPIC Kitchen touch-mask dataset. Run all from `Touch_Breaks_Feelings/`.
 
 ---
 
@@ -9,18 +9,34 @@ Scripts for building and maintaining the EPIC Kitchen touch-mask dataset. Run al
 ### `download_epic_kitchen/`
 
 Downloads VISOR annotations, extracts annotated frames, renders hand/object/touch mask triplets,
-generates `train.json` / `val.json` annotation files, and runs a sanity-check — all in a single
-pass (phases 1–5 + verify).
+stream-extracts audio from the corresponding EK100 videos, and generates `train.json` / `val.json`
+annotation files — all in a single pass (phases 1–4, 6, 5 + verify).
+
+Execution order: frames → masks → **audio** → annotations.
 
 ```bash
-python scripts/epic_kitchen/download_epic_kitchen \
+python -m scripts.epic_kitchen.download_epic_kitchen \
     --all-participants \
     --match-no-contact \
     --split train \
     --workers 8
 ```
 
-Add `--skip-verify` to suppress the post-download readiness check.
+Key flags:
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--skip-audio` | off | Skip Phase 6; `audio_path` will be absent from annotations |
+| `--audio-dir PATH` | `data/epic_kitchen/audio` | Override where `.aac` files are stored |
+| `--skip-verify` | off | Suppress the post-download readiness check |
+
+**Phase 6 note:** Uses `ffmpeg` to stream-extract the AAC audio track directly from the EK100
+HTTP endpoint — the full video is never written to disk. Requires `ffmpeg` on `PATH`.
+
+**Annotation fields added by this pipeline:**
+
+- `audio_timestamp_sec` — frame number ÷ 50 fps (always present for EK frames)
+- `audio_path` — absolute path to `audio/{video_id}.aac` (present unless `--skip-audio`)
 
 **When:** First-time setup. Produces everything under `data/epic_kitchen/` including the final annotation JSONs.
 
