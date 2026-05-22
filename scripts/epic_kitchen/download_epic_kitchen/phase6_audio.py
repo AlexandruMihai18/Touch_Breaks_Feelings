@@ -1,7 +1,8 @@
 """Phase 6 — Extract audio tracks for sampled EPIC-Kitchens-100 videos.
 
-ffmpeg streams directly from the EK100 HTTP endpoint and copies the embedded
-AAC track to audio/{video_id}.aac without downloading the full video to disk.
+ffmpeg streams directly from the EK100/EK55 HTTP endpoint and copies the
+embedded AAC track to audio/{video_id}.m4a (AAC in MP4 container) without
+downloading the full video to disk.
 """
 
 import shutil
@@ -13,8 +14,8 @@ import urllib.request
 from .constants import EK100_VIDEO_BASE, EK55_VIDEO_BASE
 from .failure_log import FailureLog
 
-_AUDIO_EXT     = "aac"
-_FFMPEG_TIMEOUT = 300  # seconds per video
+_AUDIO_EXT      = "m4a"  # AAC in MP4 container — readable by soundfile/librosa without ffmpeg fallback
+_FFMPEG_TIMEOUT = 3600   # seconds per video — EK100 videos run up to ~30 min; ffmpeg ~2× realtime
 
 
 def audio_path_for(video_id: str, audio_root: Path) -> Path:

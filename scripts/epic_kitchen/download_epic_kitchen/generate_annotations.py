@@ -74,7 +74,7 @@ _PAIR_MASK_RE = re.compile(r"^(.+)_p(\d+)_(hand|object|touch)$")
 # EK100 frame names: {video_id}_frame_{NNNNNNNNNN}.jpg  (50 fps)
 _FRAME_NUM_RE = re.compile(r"_frame_(\d+)\.")
 _EPIC_FPS     = 50
-_AUDIO_EXT    = "aac"
+_AUDIO_EXT    = "m4a"
 
 
 def _has_touch(touch_path: Path) -> bool:
@@ -271,7 +271,7 @@ def main() -> None:
     p.add_argument("--masks_dir",  default=None, help="Root dir with per-video mask subfolders")
     p.add_argument("--output_dir", default=None, help="Where to write train.json and val.json")
     p.add_argument("--audio_root", default=None,
-                   help="Root dir with audio/{video_id}.aac files; adds audio_path + "
+                   help="Root dir with audio/{video_id}.m4a files; adds audio_path + "
                         "audio_timestamp_sec fields to annotation entries")
     p.add_argument("--val_frac", type=float, default=0.15)
     p.add_argument("--seed", type=int, default=42)

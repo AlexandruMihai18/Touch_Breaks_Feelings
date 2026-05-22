@@ -31,7 +31,7 @@ Output layout:
   ├── visor/GroundTruth-SparseAnnotations/annotations/{split}/
   ├── frames/{video_id}/{frame_name}.jpg
   ├── masks/{video_id}/{stem}_{hand|object|touch}.png
-  ├── audio/{video_id}.aac
+  ├── audio/{video_id}.m4a
   ├── annotations/{train|val}.json
   └── failures.json
 """
@@ -67,7 +67,7 @@ def parse_args():
     p.add_argument("--skip-audio",        action="store_true",
                    help="Skip Phase 6 (audio extraction)")
     p.add_argument("--audio-dir",         default=None,
-                   help="Where to store .aac files (default: <output_dir>/audio)")
+                   help="Where to store .m4a files (default: <output_dir>/audio)")
     p.add_argument("--skip-annotations",  action="store_true",
                    help="Skip Phase 5 (generate_annotations.py)")
     p.add_argument("--skip-verify",       action="store_true",
@@ -186,7 +186,7 @@ def main():
   │   ├── {{stem}}_hand.png
   │   ├── {{stem}}_object.png
   │   └── {{stem}}_touch.png
-  ├── audio/{{video_id}}.aac
+  ├── audio/{{video_id}}.m4a
   ├── annotations/
   │   ├── train.json   (includes audio_path + audio_timestamp_sec)
   │   └── val.json
