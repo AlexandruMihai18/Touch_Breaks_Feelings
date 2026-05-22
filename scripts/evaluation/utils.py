@@ -8,7 +8,7 @@ from pathlib import Path
 import pandas as pd
 
 
-_ANNOTATION_FIELDS = ["depth_touch", "object_coverage", "x_touch", "y_touch"]
+_ANNOTATION_FIELDS = ["depth_touch", "object_coverage", "x_touch", "y_touch", "object_name"]
 
 
 def enrich_df(df: pd.DataFrame, annotation_paths: list[Path]) -> pd.DataFrame:

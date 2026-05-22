@@ -62,13 +62,15 @@ else
     exit 1
 fi
 
+EK_ROOT="/scratch-shared/$(whoami)/epic_kitchen"
+
 # ── run ──────────────────────────────────────────────────────────────────────
 python -m scripts.epic_kitchen.download_epic_kitchen \
     --participants "${SLICE[@]}" \
     ${MODE_FLAG} \
     --split "${SPLIT}" \
     --workers "${SLURM_CPUS_PER_TASK}" \
-    --output-dir "./data/epic_kitchen" \
-    --failure-log "./data/epic_kitchen/failures_${SPLIT}_${TASK_ID}.json" \
+    --output-dir "${EK_ROOT}" \
+    --failure-log "${EK_ROOT}/failures_${SPLIT}_${TASK_ID}.json" \
     --skip-annotations \
     --skip-verify
