@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 import random
+import hashlib
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+import numpy as np
 import torch
 from PIL import Image
 from sklearn.model_selection import train_test_split
@@ -31,6 +33,7 @@ class DinoSample:
     video_id: str
     frame_id: str
     sample_type: str
+    target_path: str
 
 
 @dataclass(frozen=True)
@@ -59,6 +62,7 @@ def normalize_row(row: dict, dataset_name: str) -> DinoSample:
         video_id=str(row.get("video_id", "")),
         frame_id=str(frame_id),
         sample_type=sample_type,
+        target_path=str(row.get("target_path", "")),
     )
 
 
@@ -197,17 +201,65 @@ def load_splits(
 
 
 class DinoFrameDataset(Dataset):
-    def __init__(self, samples: list[DinoSample], processor):
+    def __init__(self, samples: list[DinoSample], processor, task: str = "binary", seed: int = 42):
         self.samples = samples
         self.processor = processor
+        self.task = task
+        self.seed = seed
 
     def __len__(self) -> int:
         return len(self.samples)
 
-    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor, str, str, str]:
+    def _sample_touch_point(self, sample: DinoSample, width: int, height: int) -> torch.Tensor:
+        if not sample.target_path:
+            raise ValueError(f"Point task sample is missing target_path: {sample}")
+        mask = np.array(Image.open(sample.target_path).convert("L"))
+        ys, xs = np.nonzero(mask > 0)
+        if len(xs) == 0:
+            raise ValueError(f"Point task sample has empty touch mask: {sample.target_path}")
+
+        key = f"{self.seed}:{sample.dataset}:{sample.video_id}:{sample.frame_id}:{sample.image_path}"
+        digest = hashlib.sha256(key.encode("utf-8")).digest()
+        point_idx = int.from_bytes(digest[:8], "big") % len(xs)
+        x = float(xs[point_idx]) / max(width - 1, 1)
+        y = float(ys[point_idx]) / max(height - 1, 1)
+        return torch.tensor([x, y], dtype=torch.float32)
+
+    def __getitem__(self, idx: int):
         sample = self.samples[idx]
         image = Image.open(sample.image_path).convert("RGB")
+        width, height = image.size
         inputs = self.processor(images=image, return_tensors="pt")
         pixel_values = inputs["pixel_values"].squeeze(0)
-        label = torch.tensor(sample.label, dtype=torch.long)
-        return pixel_values, label, sample.dataset, sample.video_id, sample.frame_id
+        if self.task == "point":
+            label = self._sample_touch_point(sample, width, height)
+        else:
+            label = torch.tensor(sample.label, dtype=torch.long)
+        return (
+            pixel_values,
+            label,
+            sample.dataset,
+            sample.video_id,
+            sample.frame_id,
+            sample.image_path,
+            torch.tensor(width, dtype=torch.float32),
+            torch.tensor(height, dtype=torch.float32),
+        )
+
+
+def filter_point_samples(samples: list[DinoSample]) -> tuple[list[DinoSample], int]:
+    kept: list[DinoSample] = []
+    skipped = 0
+    for sample in samples:
+        if sample.sample_type != "touch" or not sample.target_path or not Path(sample.target_path).exists():
+            skipped += 1
+            continue
+        try:
+            if Image.open(sample.target_path).convert("L").getbbox() is None:
+                skipped += 1
+                continue
+        except OSError:
+            skipped += 1
+            continue
+        kept.append(sample)
+    return kept, skipped

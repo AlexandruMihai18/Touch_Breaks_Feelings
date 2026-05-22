@@ -24,13 +24,13 @@ Options:
   --features     Download precomputed sound features       (~ 1 GB)
   --all          Download everything
   --dir DIR      Target directory (default: <script>/../data/greatest_hits)
-  --scratch      Download to Snellius scratch-local: /scratch-local/<user>/greatest_hits
+  --scratch      Download to Snellius scratch-shared: /scratch-shared/<user>/greatest_hits
   -h, --help     Show this help
 
 Examples:
   $0 --low                         # recommended starting point
   $0 --all --dir /data/vis
-  $0 --low --scratch               # download to /scratch-local/<user>/greatest_hits
+  $0 --low --scratch               # download to /scratch-shared/<user>/greatest_hits
 USAGE
   exit 0
 }
@@ -111,11 +111,11 @@ done
 # --scratch overrides --dir; resolve username at runtime via $(whoami)
 if [[ "$USE_SCRATCH" == true ]]; then
   SCRATCH_USER="$(whoami)"
-  SCRATCH_BASE="/scratch-local/${SCRATCH_USER}"
+  SCRATCH_BASE="/scratch-shared/${SCRATCH_USER}"
   mkdir -p "$SCRATCH_BASE"
   DEST_DIR="${SCRATCH_BASE}/greatest_hits"
-  log "Scratch mode enabled → using /scratch-local/${SCRATCH_USER}/greatest_hits"
-  log "WARNING: scratch-local files older than 6 days are deleted automatically. Copy results to your home or project space when done."
+  log "Scratch mode enabled → using /scratch-shared/${SCRATCH_USER}/greatest_hits"
+  log "WARNING: scratch-shared files older than 6 days are deleted automatically. Copy results to your home or project space when done."
 fi
 
 # ---------- download ---------------------------------------------------------
