@@ -88,6 +88,14 @@ def parse_args() -> argparse.Namespace:
         "--skip-existing", action="store_true",
         help="Skip folders that already have a dataset.json in the masks directory.",
     )
+    parser.add_argument(
+        "--num-jobs", type=int, default=1,
+        help="Total number of parallel SLURM array tasks.",
+    )
+    parser.add_argument(
+        "--job-index", type=int, default=0,
+        help="0-based index of this task (SLURM_ARRAY_TASK_ID).",
+    )
     # ── Touch region ────────────────────────────────────────────────────────
     parser.add_argument(
         "--dilation", type=int, default=10,
@@ -140,10 +148,16 @@ def main() -> None:
         print(f"No video folders found in {args.frames_dir}")
         sys.exit(0)
 
+    # Round-robin shard: job i handles indices i, i+num_jobs, i+2*num_jobs, …
+    if args.num_jobs > 1:
+        folders = folders[args.job_index::args.num_jobs]
+
     print("=" * 60)
     print("  Greatest Hits auto-annotation")
     print(f"  frames dir       : {args.frames_dir}")
     print(f"  masks dir        : {args.masks_dir}")
+    if args.num_jobs > 1:
+        print(f"  job              : {args.job_index + 1}/{args.num_jobs}")
     print(f"  videos           : {len(folders)}")
     print(f"  dilation         : {args.dilation} px")
     print(f"  abs-d-threshold  : {args.abs_d_threshold}")

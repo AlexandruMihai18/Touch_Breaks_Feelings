@@ -7,15 +7,20 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --time=08:00:00
-#SBATCH --output=slurm_output_%A.out
+#SBATCH --array=0-3                          # 4 parallel tasks (indices 0-3)
+#SBATCH --output=slurm_output_%A_%a.out
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=daniel.otero.gomez@student.uva.nl
 
-# Per-frame SAM + Depth-Anything-V2 annotation — GPU required.
-# ~1-2s per frame; budget 8h for the full dataset.
+# Parallelised per-frame SAM + Depth-Anything-V2 annotation — GPU required.
+# Each array task handles 1/NUM_JOBS of the video folders (round-robin).
+# ~1-2s per frame; 4 tasks cut the wall-clock to ~2h for the full dataset.
 # Re-submit with --skip-existing to resume an interrupted run.
 #
+# To change parallelism: update --array and NUM_JOBS together.
 # Run after prepare_data.sh has completed.
+
+NUM_JOBS=4   # must match the upper bound of --array + 1
 
 module purge
 module load 2025
@@ -37,4 +42,6 @@ python scripts/greatest_hits/4_annotate_greatest_hits.py \
     --guided-filter \
     --refine-radius 4 \
     --refine-eps 0.1 \
-    --skip-existing
+    --skip-existing \
+    --num-jobs  "$NUM_JOBS" \
+    --job-index "$SLURM_ARRAY_TASK_ID"
