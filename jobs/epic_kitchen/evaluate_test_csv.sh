@@ -10,11 +10,11 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=daniel.otero.gomez@student.uva.nl
 
-# Smoke test for all three evaluate scripts (depth, coverage, touch zones).
+# Smoke test for all evaluation scripts (depth, coverage, touch zones, object clusters).
 # Prerequisite: run annotate_eval_fields.sh first to populate depth_touch,
 # object_coverage, x_touch, y_touch in the val annotation JSON.
 # No GPU required. Outputs PNGs to results/test/ next to the input CSV.
-# Check slurm_output_eval_test_<jobid>.out and the three PNGs in results/test/.
+# Check slurm_output_eval_test_<jobid>.out and the PNGs in results/test/.
 
 module purge
 module load 2025
@@ -26,6 +26,12 @@ cd "$HOME/Touch_Breaks_Feelings"
 
 CSV=results/test/epic_kitchen_val_seggpt_touch_results.csv
 ANNOTATIONS=/scratch-shared/dotero/epic_kitchen/annotations/val.json
+LABELS=data/epic_kitchen/object_labels.txt
+
+# Build object cluster mappings from hand-crafted rule JSONs
+python scripts/evaluation/cluster_object_classes.py \
+    "$LABELS" \
+    --output-dir data/epic_kitchen/
 
 python scripts/evaluation/depth/analyze_depth_performance.py \
     "$CSV" \

@@ -1,0 +1,1008 @@
+{
+  "explicit": {
+    "knife": "Utensils",
+    "spoon": "Utensils",
+    "fork": "Utensils",
+    "spatula": "Utensils",
+    "wooden spoon": "Utensils",
+    "peeler": "Utensils",
+    "tong": "Utensils",
+    "teaspoon": "Utensils",
+    "scissors": "Utensils",
+    "chopstick": "Utensils",
+    "ladle": "Utensils",
+    "sieve spatula": "Utensils",
+    "plastic spatula": "Utensils",
+    "rolling pin": "Utensils",
+    "sieve": "Utensils",
+    "colander": "Utensils",
+    "cutlery": "Utensils",
+    "potato peeler": "Utensils",
+    "lemon squeezer piece": "Utensils",
+    "chopping board": "Utensils",
+    "filter holder": "Utensils",
+    "bit": "Utensils",
+    "scrabber": "Utensils",
+    "pan": "Cookware",
+    "pot": "Cookware",
+    "saucepan": "Cookware",
+    "frying pan": "Cookware",
+    "kettle": "Cookware",
+    "tray": "Cookware",
+    "baking tray": "Cookware",
+    "bowl": "Cookware",
+    "washing up bowl": "Cookware",
+    "ice cube tray": "Cookware",
+    "saucepan lid": "Cookware",
+    "plate": "Tableware",
+    "mug": "Tableware",
+    "cup": "Tableware",
+    "glass": "Tableware",
+    "jar": "Tableware",
+    "bottle": "Tableware",
+    "jug": "Tableware",
+    "tupperware": "Tableware",
+    "container": "Tableware",
+    "can": "Tableware",
+    "lid": "Tableware",
+    "salt bottle": "Tableware",
+    "milk bottle": "Tableware",
+    "oil bottle": "Tableware",
+    "olive oil bottle": "Tableware",
+    "cloth": "Textiles",
+    "sponge": "Textiles",
+    "tea towel": "Textiles",
+    "glove": "Textiles",
+    "right glove": "Textiles",
+    "left glove": "Textiles",
+    "clothes": "Textiles",
+    "rag": "Textiles",
+    "towel": "Textiles",
+    "kitchen towel": "Textiles",
+    "baking paper": "Textiles",
+    "paper": "Textiles",
+    "clothespin": "Textiles",
+    "onion": "Food",
+    "garlic": "Food",
+    "mozzarella": "Food",
+    "dough": "Food",
+    "meat": "Food",
+    "pepper": "Food",
+    "cucumber": "Food",
+    "carrot": "Food",
+    "pak choi": "Food",
+    "broccoli": "Food",
+    "chicken thigh": "Food",
+    "aubergine": "Food",
+    "aubergine end": "Food",
+    "bay leaf": "Food",
+    "peanut": "Food",
+    "passata": "Food",
+    "sandwich": "Food",
+    "courgette": "Food",
+    "cheese": "Food",
+    "egg": "Food",
+    "chicken meat": "Food",
+    "tuna patty": "Food",
+    "corn": "Food",
+    "mushroom": "Food",
+    "bread": "Food",
+    "pizza": "Food",
+    "peach": "Food",
+    "tomato": "Food",
+    "salt": "Food",
+    "spice": "Food",
+    "garlic skin": "Food",
+    "cucumber piece": "Food",
+    "carrot bit/piece": "Food",
+    "pepper bit/piece": "Food",
+    "parsley": "Food",
+    "olive": "Food",
+    "sweet potato": "Food",
+    "milk": "Food",
+    "potato": "Food",
+    "chicken": "Food",
+    "mozzarella ball": "Food",
+    "broccoli floret": "Food",
+    "tofu piece": "Food",
+    "soy milk": "Food",
+    "peel": "Food",
+    "oil": "Food",
+    "water": "Food",
+    "filter": "Food",
+    "tap": "Appliances",
+    "drawer": "Appliances",
+    "fridge": "Appliances",
+    "cupboard": "Appliances",
+    "sink": "Appliances",
+    "hob": "Appliances",
+    "hob/cooktop/stovetop": "Appliances",
+    "oven": "Appliances",
+    "dishwasher": "Appliances",
+    "coffee machine": "Appliances",
+    "microwave": "Appliances",
+    "switch": "Appliances",
+    "aeropress": "Appliances",
+    "bin/garbage can/recycling bin": "Appliances",
+    "water filter": "Appliances",
+    "scale": "Appliances",
+    "bag": "Packaging",
+    "plastic bag": "Packaging",
+    "packaging": "Packaging",
+    "box": "Packaging",
+    "flour bag": "Packaging",
+    "pasta bag": "Packaging",
+    "cereal bag": "Packaging",
+    "cereal box": "Packaging",
+    "mozzarella package": "Packaging",
+    "brush": "Utensils",
+    "can opener": "Utensils",
+    "clip": "Utensils",
+    "drainer": "Utensils",
+    "garlic press": "Utensils",
+    "lime juicer": "Utensils",
+    "thermometer": "Utensils",
+    "tongs": "Utensils",
+    "grid": "Cookware",
+    "grill": "Cookware",
+    "rice cooker lid": "Cookware",
+    "cap": "Tableware",
+    "tomato sauce can": "Tableware",
+    "tub": "Tableware",
+    "washing up liquid": "Tableware",
+    "kitchen roll": "Textiles",
+    "mesh": "Textiles",
+    "place mat": "Textiles",
+    "scourer": "Textiles",
+    "soap": "Textiles",
+    "bagel": "Food",
+    "banana": "Food",
+    "bell pepper": "Food",
+    "biscuit": "Food",
+    "bread slice": "Food",
+    "broccoli piece": "Food",
+    "carrot piece": "Food",
+    "cereal": "Food",
+    "chicken bone": "Food",
+    "chilli": "Food",
+    "chorizo": "Food",
+    "coriander": "Food",
+    "corn piece": "Food",
+    "courgette pieces": "Food",
+    "eggshell": "Food",
+    "fish": "Food",
+    "flour": "Food",
+    "garlic clove": "Food",
+    "garlic paste": "Food",
+    "ginger": "Food",
+    "green onion": "Food",
+    "herb": "Food",
+    "hummus": "Food",
+    "leek": "Food",
+    "lettuce": "Food",
+    "lime": "Food",
+    "mushroom piece": "Food",
+    "olive oil": "Food",
+    "onion peel": "Food",
+    "onion skin": "Food",
+    "pak choi leaf": "Food",
+    "pasta": "Food",
+    "pitta piece": "Food",
+    "pizza base": "Food",
+    "rolled omelette slice": "Food",
+    "salami": "Food",
+    "spring onion": "Food",
+    "steamed bun": "Food",
+    "stock cube": "Food",
+    "tuna mixture": "Food",
+    "waste": "Food",
+    "yoghurt": "Food",
+    "bin": "Appliances",
+    "cabinet": "Appliances",
+    "cleaning spray": "Appliances",
+    "cleaner": "Appliances",
+    "cleanser": "Appliances",
+    "chair": "Appliances",
+    "button": "Appliances",
+    "coffee holder": "Appliances",
+    "counter": "Appliances",
+    "food processor cover": "Appliances",
+    "freezer": "Appliances",
+    "lighter": "Appliances",
+    "refrigerator": "Appliances",
+    "rubbish/trash": "Appliances",
+    "stove": "Appliances",
+    "water boiler": "Appliances",
+    "bread packet": "Packaging",
+    "cheese packet": "Packaging",
+    "cling film": "Packaging",
+    "foil": "Packaging",
+    "instruction booklet": "Packaging",
+    "packet": "Packaging",
+    "plastic": "Packaging",
+    "wrap": "Packaging",
+    "board": "Utensils",
+    "blade": "Utensils",
+    "carrot skinner": "Utensils",
+    "chopping blade": "Utensils",
+    "chop stick": "Utensils",
+    "colendar": "Utensils",
+    "corkscrew": "Utensils",
+    "cutting board": "Utensils",
+    "dish brush": "Utensils",
+    "dustpan": "Utensils",
+    "hand blender piece": "Utensils",
+    "lemon squeezer": "Utensils",
+    "packet clip": "Utensils",
+    "pizza cutter": "Utensils",
+    "plastic spade": "Utensils",
+    "processor bit": "Utensils",
+    "rice measurer": "Utensils",
+    "shaker": "Utensils",
+    "sheath": "Utensils",
+    "slicer": "Utensils",
+    "slicer guard": "Utensils",
+    "spade": "Utensils",
+    "squeezer": "Utensils",
+    "stirrer": "Utensils",
+    "sushi mat": "Utensils",
+    "thermometer case": "Utensils",
+    "thermometer sheath": "Utensils",
+    "tool": "Utensils",
+    "tweezers": "Utensils",
+    "washing up brush": "Utensils",
+    "wooden chopping board": "Utensils",
+    "wooden stirrer": "Utensils",
+    "wooden tongs": "Utensils",
+    "basket": "Cookware",
+    "cake mould": "Cookware",
+    "mocha upper part": "Cookware",
+    "pie dish base": "Cookware",
+    "rack": "Cookware",
+    "rice cooker bucket": "Cookware",
+    "steel mesh": "Cookware",
+    "steamer lid": "Cookware",
+    "steaming shelf": "Cookware",
+    "trivet": "Cookware",
+    "can lid": "Tableware",
+    "carafe": "Tableware",
+    "coffee carafe": "Tableware",
+    "coaster": "Tableware",
+    "cork": "Tableware",
+    "cylinder": "Tableware",
+    "egg ramekin": "Tableware",
+    "hummus tub": "Tableware",
+    "olive oil cap": "Tableware",
+    "olive oil spray": "Tableware",
+    "other containers": "Tableware",
+    "peanut ramekin": "Tableware",
+    "pepper cellar": "Tableware",
+    "pepper/salt cellar": "Tableware",
+    "pepper shaker": "Tableware",
+    "ramekin": "Tableware",
+    "rice vinegar lid": "Tableware",
+    "salt cap": "Tableware",
+    "spice cap": "Tableware",
+    "sweetcorn can": "Tableware",
+    "sweet corn can": "Tableware",
+    "top": "Tableware",
+    "tonic water": "Food",
+    "vinegar cap": "Tableware",
+    "washing up liquid/dish soap": "Tableware",
+    "water filter lid": "Tableware",
+    "yoghurt tub": "Tableware",
+    "coriander ramekin": "Tableware",
+    "apron": "Textiles",
+    "degreaser": "Textiles",
+    "detergent": "Textiles",
+    "dishtowel": "Textiles",
+    "dishwashing liquid": "Textiles",
+    "laundry": "Textiles",
+    "liquid soap": "Textiles",
+    "mitten": "Textiles",
+    "mittens": "Textiles",
+    "nylon": "Textiles",
+    "serviette/table napkin": "Textiles",
+    "sock": "Textiles",
+    "steel wool": "Textiles",
+    "tissue": "Textiles",
+    "washing foam": "Textiles",
+    "washing liquid": "Textiles",
+    "washing powder": "Textiles",
+    "avocado": "Food",
+    "avocado skin": "Food",
+    "basil": "Food",
+    "basil plant": "Food",
+    "beer": "Food",
+    "biscuit powder": "Food",
+    "black bean sauce": "Food",
+    "black pepper": "Food",
+    "blueberry": "Food",
+    "broccoli rest": "Food",
+    "butter": "Food",
+    "caper": "Food",
+    "carrot choppings": "Food",
+    "carrot end": "Food",
+    "carrot peel": "Food",
+    "carrot peeling": "Food",
+    "celery": "Food",
+    "cheese bit": "Food",
+    "cherry": "Food",
+    "chicken piece": "Food",
+    "chilli oil": "Food",
+    "chocolate": "Food",
+    "chocolate dessert": "Food",
+    "chopped onion": "Food",
+    "cocoa powder": "Food",
+    "coconut milk": "Food",
+    "coffee": "Food",
+    "cooked rice": "Food",
+    "cookie": "Food",
+    "courgette bit": "Food",
+    "courgette/zucchini": "Food",
+    "cow milk": "Food",
+    "cream": "Food",
+    "cream cheese": "Food",
+    "creme fraiche": "Food",
+    "crisp": "Food",
+    "crisp/chips": "Food",
+    "cucumber bits": "Food",
+    "cucumber end": "Food",
+    "cucumber film": "Packaging",
+    "cucumber salad": "Food",
+    "cucumber slices": "Food",
+    "curry": "Food",
+    "curry leaf": "Food",
+    "egg omelette": "Food",
+    "fat": "Food",
+    "fish piece": "Food",
+    "fish sauce": "Food",
+    "fish skin": "Food",
+    "foam": "Food",
+    "foiled dessert": "Food",
+    "food": "Food",
+    "food bit": "Food",
+    "four": "Food",
+    "fruit": "Food",
+    "garlic bulb": "Food",
+    "garlic peel": "Food",
+    "garlic piece": "Food",
+    "garlic slices": "Food",
+    "gin": "Food",
+    "granola": "Food",
+    "granule": "Food",
+    "gravy cube": "Food",
+    "green bean": "Food",
+    "hamburger": "Food",
+    "hamburger bun": "Food",
+    "honey": "Food",
+    "ice cube": "Food",
+    "ice piece": "Food",
+    "ingredient": "Food",
+    "jam": "Food",
+    "kale": "Food",
+    "leaf skin": "Food",
+    "leek pieces": "Food",
+    "leftover food": "Food",
+    "lemon": "Food",
+    "lemon curd": "Food",
+    "lemon slice": "Food",
+    "lime piece": "Food",
+    "mayonnaise": "Food",
+    "minced meat": "Food",
+    "mixture": "Food",
+    "mocha": "Appliances",
+    "mozzarella slice": "Food",
+    "onion bit": "Food",
+    "onion peeling": "Food",
+    "onion peels": "Food",
+    "onion piece": "Food",
+    "onion pieces": "Food",
+    "onion slice rest": "Food",
+    "omelette": "Food",
+    "oregano": "Food",
+    "pancake": "Food",
+    "paneer": "Food",
+    "paprika": "Food",
+    "parmesan": "Food",
+    "parmesan cheese": "Food",
+    "pasta pack": "Packaging",
+    "pasta piece": "Food",
+    "peach pit": "Food",
+    "peach rind": "Food",
+    "peach slice": "Food",
+    "pea": "Food",
+    "peeling": "Food",
+    "peels": "Food",
+    "pepper bit": "Food",
+    "pepper bits": "Food",
+    "pepper piece": "Food",
+    "pepper stalk": "Food",
+    "pepper top": "Food",
+    "pepperoni": "Food",
+    "pesto": "Food",
+    "pesto sauce": "Food",
+    "pie": "Food",
+    "pine nut": "Food",
+    "pitta bread": "Food",
+    "pizza slice": "Food",
+    "pizza topping": "Food",
+    "pork": "Food",
+    "pork piece": "Food",
+    "potato peel": "Food",
+    "potato skin": "Food",
+    "potato slice": "Food",
+    "powder": "Food",
+    "raisin": "Food",
+    "red chilli": "Food",
+    "red pepper paste": "Food",
+    "rice": "Food",
+    "rice vinegar": "Food",
+    "rolled omelette": "Food",
+    "roots": "Food",
+    "rosemary": "Food",
+    "rubbish peel": "Food",
+    "salad": "Food",
+    "salted bean curd": "Food",
+    "salmon": "Food",
+    "sauce": "Food",
+    "sausage": "Food",
+    "scotch egg": "Food",
+    "scrap": "Food",
+    "sesame oil": "Food",
+    "sesame roll": "Food",
+    "shreddies": "Food",
+    "sliced garlic": "Food",
+    "sliced onion": "Food",
+    "soup": "Food",
+    "spicy bean sauce": "Food",
+    "spring onion root": "Food",
+    "squash": "Food",
+    "squash/squash drink/juice concentrate": "Food",
+    "stalk": "Food",
+    "steamed bun piece": "Food",
+    "stock": "Food",
+    "sun dried tomato": "Food",
+    "sweet corn": "Food",
+    "tabasco": "Food",
+    "tea": "Food",
+    "tomato piece": "Food",
+    "tomato sauce": "Food",
+    "tortilla": "Food",
+    "tuna": "Food",
+    "tuna burger": "Food",
+    "tuna burger underside": "Food",
+    "turmeric": "Food",
+    "vegetable": "Food",
+    "vegetable peeling": "Food",
+    "vegetable piece": "Food",
+    "white bit": "Food",
+    "whey": "Food",
+    "yeast": "Food",
+    "cafetiere": "Appliances",
+    "candle": "Appliances",
+    "capsule": "Appliances",
+    "cartoon trash": "Appliances",
+    "clothes horse": "Appliances",
+    "coffee filter": "Packaging",
+    "coffee maker": "Appliances",
+    "compost bin": "Appliances",
+    "cooker": "Appliances",
+    "cooker temperature": "Appliances",
+    "cupboard door": "Appliances",
+    "desk": "Appliances",
+    "dial": "Appliances",
+    "dish washing liquid": "Textiles",
+    "door": "Appliances",
+    "drying rack": "Appliances",
+    "dust": "Appliances",
+    "dust bin": "Appliances",
+    "electric plug": "Appliances",
+    "extractor": "Appliances",
+    "extractor fan": "Appliances",
+    "fan": "Appliances",
+    "floor": "Appliances",
+    "food bin": "Appliances",
+    "food processor engine": "Appliances",
+    "food recycling bin": "Appliances",
+    "freezer drawer": "Appliances",
+    "garbage": "Appliances",
+    "garbage bin": "Appliances",
+    "gas temperature": "Appliances",
+    "grinder": "Appliances",
+    "hand blender": "Appliances",
+    "hand blender motor": "Appliances",
+    "hand held hoover": "Appliances",
+    "hanger": "Appliances",
+    "heat": "Appliances",
+    "kitchen": "Appliances",
+    "kitchen floor": "Appliances",
+    "knob": "Appliances",
+    "ladder": "Appliances",
+    "laundry basket": "Appliances",
+    "left foot": "Appliances",
+    "mixer": "Appliances",
+    "mixer lid": "Appliances",
+    "mobile": "Appliances",
+    "mobile/cell phone": "Appliances",
+    "napkin holder": "Appliances",
+    "pa": "Appliances",
+    "pen": "Appliances",
+    "phone": "Appliances",
+    "plug": "Appliances",
+    "recycling bin": "Appliances",
+    "rice cooker": "Appliances",
+    "rice cooker temperature": "Appliances",
+    "rubbish": "Appliances",
+    "rubbish bin": "Appliances",
+    "shelf": "Appliances",
+    "slow cooker": "Appliances",
+    "soap dispenser": "Appliances",
+    "socket": "Appliances",
+    "spray": "Appliances",
+    "stool": "Appliances",
+    "stove top": "Appliances",
+    "support": "Appliances",
+    "surface": "Appliances",
+    "switch extractor fan": "Appliances",
+    "table": "Appliances",
+    "tablet": "Appliances",
+    "temperature": "Appliances",
+    "timer": "Appliances",
+    "toaster": "Appliances",
+    "trash": "Appliances",
+    "trash bin": "Appliances",
+    "trash can": "Appliances",
+    "v60": "Appliances",
+    "v60/pourover coffee maker": "Appliances",
+    "wall": "Appliances",
+    "watch": "Appliances",
+    "window": "Appliances",
+    "aeropress filter": "Packaging",
+    "bags roll": "Packaging",
+    "bay leaf packet": "Packaging",
+    "bin lid": "Appliances",
+    "bottle cap": "Tableware",
+    "bread wrap": "Packaging",
+    "broccoli packet": "Packaging",
+    "butter lid": "Packaging",
+    "can cover": "Tableware",
+    "cardboard": "Packaging",
+    "carton": "Packaging",
+    "cling film roll": "Packaging",
+    "coffee capsule": "Packaging",
+    "coffee pod": "Packaging",
+    "coriander packet": "Packaging",
+    "cover": "Packaging",
+    "crisp packet": "Packaging",
+    "elastic wrap": "Packaging",
+    "envelope": "Packaging",
+    "film": "Packaging",
+    "granola packet": "Packaging",
+    "laundry pod": "Textiles",
+    "meat pack": "Packaging",
+    "milk lid": "Packaging",
+    "onion net": "Packaging",
+    "orange mesh": "Packaging",
+    "plastic cover": "Packaging",
+    "plastic ring": "Packaging",
+    "plastic wrap": "Packaging",
+    "pod": "Packaging",
+    "salami packet": "Packaging",
+    "salmon packet": "Packaging",
+    "seal": "Packaging",
+    "sticker": "Packaging",
+    "stretch foil": "Packaging",
+    "sugar packet": "Packaging",
+    "tag": "Packaging",
+    "top sticker": "Packaging",
+    "tube": "Packaging",
+    "yoghurt lid": "Packaging"
+  },
+  "keyword_rules": [
+    [
+      "cutter",
+      "Utensils"
+    ],
+    [
+      "slicer",
+      "Utensils"
+    ],
+    [
+      "squeezer",
+      "Utensils"
+    ],
+    [
+      "stirrer",
+      "Utensils"
+    ],
+    [
+      "corkscrew",
+      "Utensils"
+    ],
+    [
+      "brush",
+      "Utensils"
+    ],
+    [
+      "spatula",
+      "Utensils"
+    ],
+    [
+      "spoon",
+      "Utensils"
+    ],
+    [
+      "fork",
+      "Utensils"
+    ],
+    [
+      "knife",
+      "Utensils"
+    ],
+    [
+      "peeler",
+      "Utensils"
+    ],
+    [
+      "sieve",
+      "Utensils"
+    ],
+    [
+      "tong",
+      "Utensils"
+    ],
+    [
+      "ladle",
+      "Utensils"
+    ],
+    [
+      "colander",
+      "Utensils"
+    ],
+    [
+      "grater",
+      "Utensils"
+    ],
+    [
+      "strainer",
+      "Utensils"
+    ],
+    [
+      "mat",
+      "Utensils"
+    ],
+    [
+      "mould",
+      "Cookware"
+    ],
+    [
+      "steamer",
+      "Cookware"
+    ],
+    [
+      "trivet",
+      "Cookware"
+    ],
+    [
+      "pan",
+      "Cookware"
+    ],
+    [
+      "pot",
+      "Cookware"
+    ],
+    [
+      "kettle",
+      "Cookware"
+    ],
+    [
+      "tray",
+      "Cookware"
+    ],
+    [
+      "wok",
+      "Cookware"
+    ],
+    [
+      "ramekin",
+      "Tableware"
+    ],
+    [
+      "shaker",
+      "Tableware"
+    ],
+    [
+      "coaster",
+      "Tableware"
+    ],
+    [
+      "plate",
+      "Tableware"
+    ],
+    [
+      "mug",
+      "Tableware"
+    ],
+    [
+      "cup",
+      "Tableware"
+    ],
+    [
+      "glass",
+      "Tableware"
+    ],
+    [
+      "jar",
+      "Tableware"
+    ],
+    [
+      "bottle",
+      "Tableware"
+    ],
+    [
+      "bowl",
+      "Tableware"
+    ],
+    [
+      "jug",
+      "Tableware"
+    ],
+    [
+      "tupperware",
+      "Tableware"
+    ],
+    [
+      "container",
+      "Tableware"
+    ],
+    [
+      "tin",
+      "Tableware"
+    ],
+    [
+      "can",
+      "Tableware"
+    ],
+    [
+      "napkin",
+      "Textiles"
+    ],
+    [
+      "mitten",
+      "Textiles"
+    ],
+    [
+      "apron",
+      "Textiles"
+    ],
+    [
+      "tissue",
+      "Textiles"
+    ],
+    [
+      "serviette",
+      "Textiles"
+    ],
+    [
+      "dishtowel",
+      "Textiles"
+    ],
+    [
+      "cloth",
+      "Textiles"
+    ],
+    [
+      "sponge",
+      "Textiles"
+    ],
+    [
+      "towel",
+      "Textiles"
+    ],
+    [
+      "glove",
+      "Textiles"
+    ],
+    [
+      "rag",
+      "Textiles"
+    ],
+    [
+      "paper",
+      "Textiles"
+    ],
+    [
+      "sauce",
+      "Food"
+    ],
+    [
+      "skin",
+      "Food"
+    ],
+    [
+      "peeling",
+      "Food"
+    ],
+    [
+      "peels",
+      "Food"
+    ],
+    [
+      "peel",
+      "Food"
+    ],
+    [
+      "omelette",
+      "Food"
+    ],
+    [
+      "sliced",
+      "Food"
+    ],
+    [
+      "minced",
+      "Food"
+    ],
+    [
+      "chopped",
+      "Food"
+    ],
+    [
+      "parmesan",
+      "Food"
+    ],
+    [
+      "pesto",
+      "Food"
+    ],
+    [
+      "cream",
+      "Food"
+    ],
+    [
+      "bread",
+      "Food"
+    ],
+    [
+      "corn",
+      "Food"
+    ],
+    [
+      "stalk",
+      "Food"
+    ],
+    [
+      "bag",
+      "Packaging"
+    ],
+    [
+      "packaging",
+      "Packaging"
+    ],
+    [
+      "package",
+      "Packaging"
+    ],
+    [
+      "packet",
+      "Packaging"
+    ],
+    [
+      "box",
+      "Packaging"
+    ],
+    [
+      "wrapper",
+      "Packaging"
+    ],
+    [
+      "capsule",
+      "Packaging"
+    ],
+    [
+      "carton",
+      "Packaging"
+    ],
+    [
+      "cardboard",
+      "Packaging"
+    ],
+    [
+      "sticker",
+      "Packaging"
+    ],
+    [
+      "pod",
+      "Packaging"
+    ],
+    [
+      "blender",
+      "Appliances"
+    ],
+    [
+      "cooker",
+      "Appliances"
+    ],
+    [
+      "temperature",
+      "Appliances"
+    ],
+    [
+      "extractor",
+      "Appliances"
+    ],
+    [
+      "fan",
+      "Appliances"
+    ],
+    [
+      "grinder",
+      "Appliances"
+    ],
+    [
+      "mixer",
+      "Appliances"
+    ],
+    [
+      "door",
+      "Appliances"
+    ],
+    [
+      "trash",
+      "Appliances"
+    ],
+    [
+      "garbage",
+      "Appliances"
+    ],
+    [
+      "bin",
+      "Appliances"
+    ],
+    [
+      "fridge",
+      "Appliances"
+    ],
+    [
+      "oven",
+      "Appliances"
+    ],
+    [
+      "hob",
+      "Appliances"
+    ],
+    [
+      "sink",
+      "Appliances"
+    ],
+    [
+      "tap",
+      "Appliances"
+    ],
+    [
+      "machine",
+      "Appliances"
+    ],
+    [
+      "dishwasher",
+      "Appliances"
+    ],
+    [
+      "microwave",
+      "Appliances"
+    ],
+    [
+      "drawer",
+      "Appliances"
+    ],
+    [
+      "freezer",
+      "Appliances"
+    ],
+    [
+      "dispenser",
+      "Appliances"
+    ]
+  ]
+}

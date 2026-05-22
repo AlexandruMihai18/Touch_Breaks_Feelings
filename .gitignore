@@ -22,6 +22,8 @@ prepared_data/
 !**/data/**/object_labels_surface_removed.txt
 !**/data/**/sample_annotation.json
 !**/data/**/sample_context_frames.json
+!**/data/**/cluster_rules_7.json
+!**/data/**/cluster_rules_gh.json
 **/data/**/*.wav
 **/data/**/*.zip
 *.m4a
