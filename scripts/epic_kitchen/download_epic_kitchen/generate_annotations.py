@@ -135,7 +135,16 @@ def generate(
     val_frac: float = 0.15,
     seed: int = 42,
     audio_root: str | Path | None = None,
+    video_ids: set[str] | None = None,
+    output_name: str | None = None,
 ) -> None:
+    """
+    Generate annotation JSON(s) from frames and masks on disk.
+
+    video_ids   – if given, only videos whose ID is in this set are processed.
+    output_name – if given, write a single ``{output_name}.json`` (no train/val
+                  split). Useful when train and val are managed externally.
+    """
     frames_dir = Path(frames_dir).resolve()
     masks_dir = Path(masks_dir).resolve()
     output_dir = Path(output_dir)
@@ -152,6 +161,8 @@ def generate(
             continue
 
         video_id = video_dir.name
+        if video_ids is not None and video_id not in video_ids:
+            continue
         mask_video_dir = masks_dir / video_id
 
         if not mask_video_dir.exists():
@@ -214,20 +225,26 @@ def generate(
         print("No pairs found — check your directory structure and extensions.")
         return
 
-    # Stratified split by (video_id, type): preserves the touch/no-touch balance
-    # within each video across both splits. Groups with only one sample are
-    # dropped by split_data (can't be split).
-    df = pd.DataFrame(all_pairs)
-    train_df, val_df = split_data(
-        df,
-        train_size=1 - val_frac,
-        strata=["video_id", "type"],
-        random_state=seed,
-    )
-    train_pairs = train_df.to_dict(orient="records")
-    val_pairs = val_df.to_dict(orient="records")
+    if output_name:
+        # No split — write everything to a single named JSON.
+        splits_to_write = [(output_name, all_pairs)]
+    else:
+        # Stratified split by (video_id, type): preserves the touch/no-touch balance
+        # within each video across both splits. Groups with only one sample are
+        # dropped by split_data (can't be split).
+        df = pd.DataFrame(all_pairs)
+        train_df, val_df = split_data(
+            df,
+            train_size=1 - val_frac,
+            strata=["video_id", "type"],
+            random_state=seed,
+        )
+        splits_to_write = [
+            ("train", train_df.to_dict(orient="records")),
+            ("val",   val_df.to_dict(orient="records")),
+        ]
 
-    for split, pairs in [("train", train_pairs), ("val", val_pairs)]:
+    for split, pairs in splits_to_write:
         out = output_dir / f"{split}.json"
         out.write_text(json.dumps(pairs, indent=2))
         n_touch = sum(1 for p in pairs if p["type"] == "touch")
@@ -269,12 +286,22 @@ def main() -> None:
     )
     p.add_argument("--frames_dir", default=None, help="Root dir with per-video frame subfolders")
     p.add_argument("--masks_dir",  default=None, help="Root dir with per-video mask subfolders")
-    p.add_argument("--output_dir", default=None, help="Where to write train.json and val.json")
+    p.add_argument("--output_dir", default=None, help="Where to write annotation JSON(s)")
     p.add_argument("--audio_root", default=None,
                    help="Root dir with audio/{video_id}.m4a files; adds audio_path + "
                         "audio_timestamp_sec fields to annotation entries")
     p.add_argument("--val_frac", type=float, default=0.15)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument(
+        "--video-ids-dir", default=None,
+        help="Directory of VISOR annotation JSONs; only video IDs whose .json "
+             "exists here are included. Use to restrict generation to one VISOR split.",
+    )
+    p.add_argument(
+        "--output-name", default=None,
+        help="Write a single {output-name}.json instead of a train/val split. "
+             "Typically 'train' or 'val'.",
+    )
     p.add_argument(
         "--ctx-only",
         metavar="ANNOTATIONS_DIR",
@@ -289,8 +316,16 @@ def main() -> None:
     else:
         if not all([args.frames_dir, args.masks_dir, args.output_dir]):
             p.error("--frames_dir, --masks_dir, and --output_dir are required unless --ctx-only is set")
+
+        video_ids = None
+        if args.video_ids_dir:
+            vid_dir = Path(args.video_ids_dir)
+            video_ids = {p.stem for p in vid_dir.glob("*.json")}
+            print(f"  video filter: {len(video_ids)} video IDs from {vid_dir}")
+
         generate(args.frames_dir, args.masks_dir, args.output_dir,
-                 args.val_frac, args.seed, audio_root=args.audio_root)
+                 args.val_frac, args.seed, audio_root=args.audio_root,
+                 video_ids=video_ids, output_name=args.output_name)
 
 
 if __name__ == "__main__":
