@@ -169,6 +169,9 @@ def main(train_path, eval_path):
 
 
 if __name__ == "__main__":
-    train_path = "data/epic_kitchens/annotations/train.json"
-    eval_path = "data/epic_kitchens/annotations/val.json"
-    main(train_path, eval_path)
+    import argparse
+    parser = argparse.ArgumentParser(description="Fine-tune Qwen2-VL for touch detection")
+    parser.add_argument("--train_path", type=str, required=True, help="Path to training JSON file")
+    parser.add_argument("--eval_path", type=str, required=True, help="Path to evaluation JSON file")
+    args = parser.parse_args()
+    main(args.train_path, args.eval_path)
