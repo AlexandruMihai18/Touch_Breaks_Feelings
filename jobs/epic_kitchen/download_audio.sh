@@ -12,7 +12,7 @@
 
 # Standalone Phase 6 re-runner — stream-extracts AAC audio from EK100/EK55
 # HTTP endpoints via ffmpeg.  No GPU needed; I/O-bound.
-# Run after phases 1-3 (frames on disk).  Safe to re-run: skips existing .aac files.
+# Run after phases 1-3 (frames on disk).  Safe to re-run: skips existing .m4a files.
 #
 # To target specific videos instead of the full frames/ tree:
 #   sbatch download_audio.sh --video-ids P01_01 P01_103
