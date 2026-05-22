@@ -47,3 +47,15 @@ python scripts/evaluation/touch_zones/analyze_grid_performance.py \
     "$CSV" \
     --annotations "$ANNOTATIONS" \
     --output results/test/eval_grid_heatmap.png
+
+python scripts/evaluation/object_classes/analyze_object_performance.py \
+    "$CSV" \
+    --clusters data/epic_kitchen/object_clusters_7.json \
+    --annotations "$ANNOTATIONS" \
+    --output results/test/eval_object_perf_7.png
+
+python scripts/evaluation/object_classes/analyze_object_performance.py \
+    "$CSV" \
+    --clusters data/epic_kitchen/object_clusters_gh.json \
+    --annotations "$ANNOTATIONS" \
+    --output results/test/eval_object_perf_gh.png
