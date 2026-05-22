@@ -10,3 +10,4 @@ dependencies:
       - "numpy"
       - "pillow>=10.0"
       - "tqdm>=4.66"
+      - "gsutil"
