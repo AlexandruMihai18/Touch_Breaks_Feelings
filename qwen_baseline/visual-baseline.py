@@ -4,12 +4,12 @@ import torch
 
 from PIL import Image
 from qwen_baseline_utils import load_data
-from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
+from transformers import AutoProcessor, AutoModelForImageTextToText
 
-VISUAL_MODEL_ID = 'Qwen/Qwen2.5-VL-7B-Instruct'
+VISUAL_MODEL_ID = 'Qwen/Qwen3-VL-8B-Instruct'
 VISUAL_PROMPT_WITHOUT_AUDIO = """
 You are given an image.
-    
+
 Task:
 Determine whether the image contains a clear physical touch or contact event between two objects, two people, or a person and an object. 
 
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     data = load_data(args.dataset)
 
     processor = AutoProcessor.from_pretrained(VISUAL_MODEL_ID)
-    model = Qwen2_5_VLForConditionalGeneration.from_pretrained(VISUAL_MODEL_ID)
+    model = AutoModelForImageTextToText.from_pretrained(VISUAL_MODEL_ID, torch_dtype=torch.float16, device_map="auto")
 
     predictions = []
     points_of_touch = []
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     for image_path, label in zip(image_paths, labels):
         prediction = process_image_without_audio(image_path, processor, model)
         point_of_touch = identify_point_of_touch(image_path, processor, model)
-
+        
         if prediction == 0 and label == 0:
             point_of_touch = None
 
@@ -130,5 +130,5 @@ if __name__ == "__main__":
         'y_touch': [pt[1] if pt else None for pt in points_of_touch],
     })
 
-    results.to_csv(f'results/{args.dataset}_qwen2.5_visual_baseline_predictions.csv', index=False)
+    results.to_csv(f'results/{args.dataset}_qwen3_visual_baseline_predictions.csv', index=False)
 

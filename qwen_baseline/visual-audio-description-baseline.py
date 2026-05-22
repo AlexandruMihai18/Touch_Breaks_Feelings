@@ -6,14 +6,14 @@ import torch
 
 from PIL import Image
 from qwen_baseline_utils import load_data
-from transformers import AutoProcessor, Qwen2AudioForConditionalGeneration, Qwen2_5_VLForConditionalGeneration
+from transformers import AutoProcessor, AutoModelForImageTextToText, Qwen2AudioForConditionalGeneration
 
 AUDIO_MODEL_ID = 'Qwen/Qwen2-Audio-7B-Instruct'
 AUDIO_PROMPT = """
 You are an expert acoustic-to-visual translator. Analyze the non-speech audio provided and generate a descriptive paragraph that a vision model can use to match this audio with an image.
 
 Follow these strict constraints:
-1. Focus Area: Prioritize physical interactions, knocks, impacts, collisions, and mechanical friction. 
+1. Focus Area: Prioritize physical interactions, knocks, impacts, collisions, and mechanical friction.
 2. Transmute Sound to Physics: Describe the implied physical properties of the objects involved—their estimated mass (heavy/light), material texture (wood, metal, plastic, hollow, solid), and the force of the interaction.
 3. Spatial Context: Detail the acoustic space (e.g., tight indoor room, large echoing hall, open outdoor area) based on the reverberation and decay of the impacts.
 4. Output Format: Write exactly one continuous, highly descriptive paragraph. Do not use bullet points, markdown bolding, lists, or introductory phrases like "The audio features...". 
@@ -22,7 +22,7 @@ Follow these strict constraints:
 Begin the description immediately.
 """
 
-VISUAL_MODEL_ID = 'Qwen/Qwen2.5-VL-7B-Instruct'
+VISUAL_MODEL_ID = 'Qwen/Qwen3-VL-8B-Instruct'
 VISUAL_PROMPT_WITH_AUDIO = """
 You are given:
 1. An image
@@ -59,9 +59,9 @@ Output rules:
 def generate_description_from_audio(
     audio_path: str,
     processor: AutoProcessor,
-    model: Qwen2AudioForConditionalGeneration
+    model: AutoModelForImageTextToText
 ):
-    audio_description_path = audio_path.replace('.wav', '_description.txt')
+    audio_description_path = audio_path.replace('.m4a', '_description.txt')
 
     if os.path.exists(audio_description_path):
         return audio_description_path
@@ -85,19 +85,19 @@ def generate_description_from_audio(
     generate_ids = generate_ids[:, inputs.input_ids.size(1):]
 
     response = processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-    with audio_description_path.open('w', encoding='utf-8') as f:
+    with open(audio_description_path, 'w', encoding='utf-8') as f:
         f.write(response)
 
     return audio_description_path
 
 def process_image_with_audio_description(
-    image_path: str, 
+    image_path: str,
     audio_description_path: str,
     processor : AutoProcessor = None,
-    model : Qwen2_5_VLForConditionalGeneration = None
+    model : AutoModelForImageTextToText = None
     ) -> None:
     '''
-    Uses the Qwen2.5-VL model to process the image together with the audio description, and prints the model's response.
+    Uses the Qwen3-VL model to process the image together with the audio description, and prints the model's response.
     '''
 
     with open(audio_description_path, 'r', encoding='utf-8') as f:
@@ -163,11 +163,11 @@ if __name__ == "__main__":
 
     # Load the audio model
     audio_processor = AutoProcessor.from_pretrained(AUDIO_MODEL_ID)
-    audio_model = Qwen2AudioForConditionalGeneration.from_pretrained(AUDIO_MODEL_ID).cuda()
+    audio_model = Qwen2AudioForConditionalGeneration.from_pretrained(AUDIO_MODEL_ID, device_map="auto")
 
     # Load the visual model
     visual_processor = AutoProcessor.from_pretrained(VISUAL_MODEL_ID)
-    visual_model = Qwen2_5_VLForConditionalGeneration.from_pretrained(VISUAL_MODEL_ID).cuda()
+    visual_model = AutoModelForImageTextToText.from_pretrained(VISUAL_MODEL_ID, device_map='auto')
 
     audio_paths = data['audio_paths']
     image_paths = data['image_paths']
@@ -206,5 +206,5 @@ if __name__ == "__main__":
         'y_touch': [pt[1] if pt else None for pt in points_of_touch],
     })
 
-    results.to_csv(f'results/{args.dataset}_qwen2.5_visual_audio_description_baseline_predictions.csv', index=False)
+    results.to_csv(f'results/{args.dataset}_qwen3_visual_audio_description_baseline_predictions.csv', index=False)
     

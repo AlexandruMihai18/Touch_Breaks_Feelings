@@ -1,14 +1,16 @@
-import json
 import pandas as pd
 
 def _load_epic_kitchens_data():
-    path = './data/epic_kitchen/annotations/val.json'
+    path = '/scratch-shared/dotero/epic_kitchen/annotations/val.json'
     
     df = pd.read_json(path)
-    
+
+    image_paths = [path.replace('/gpfs/home6/Touch_Breaks_Feelings/data', '/scratch-shared') for path in df['image_path'].tolist()]
+    audio_series = '/scratch-shared/epic_kitchen/audio/' + df['video_id'] + '.m4a'
+
     return {
-        'image_paths': df['image_path'].tolist(),
-        'audio_paths': df['audio_path'].tolist(),
+        'image_paths': image_paths,
+        'audio_paths': audio_series.tolist(),
         'labels':      (df['type'] == 'touch').astype(int).tolist(), # Vectorized mapping
         'video_ids':   df['video_id'].tolist(),
         'frame_ids':   df['frame_idx'].tolist(),
@@ -16,13 +18,14 @@ def _load_epic_kitchens_data():
     }
 
 def _load_greatest_hits_data():
-    path = './data/greatest_hits/annotations/annotations.json'
+    path = '/scratch-shared/dotero/greatest_hits/annotations/val.json'
     
     df = pd.read_json(path)
+
     
     return {
-        'image_paths': df['image_path'].tolist(),
-        'audio_paths': df['audio_path'].tolist(),
+        'image_paths': df['image_path'],
+        'audio_paths': df['audio_path'],
         'labels':      (df['type'] == 'touch').astype(int).tolist(),
         'video_ids':   df['video_id'].tolist(),
         'frame_ids':   df['frame_idx'].tolist(),
@@ -30,12 +33,14 @@ def _load_greatest_hits_data():
     }
 
 def _load_sven_data():
-    path = './data/sven/annotations/annotations.json'
+    path = '/scratch-shared/dotero/kubric/annotations/annotations.json'
     
     df = pd.read_json(path)
+
+    image_paths = [path.replace('/gpfs/home6/Touch_Breaks_Feelings/data', '/scratch-shared') for path in df['image_path'].tolist()]
     
     return {
-        'image_paths': df['image_path'].tolist(),
+        'image_paths': image_paths,
         'labels':      (df['type'] == 'touch').astype(int).tolist(),
         'video_ids':   df['video_id'].tolist(),
         'frame_ids':   df['frame_idx'].tolist(),

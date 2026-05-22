@@ -1,11 +1,13 @@
 #!/bin/bash
 
-#SBATCH --partition=staging
-#SBATCH --job-name=eval_ek_refined
+
+#SBATCH --partition=gpu_a100
+#SBATCH --gpus=1
+#SBATCH --job-name=ft_qwen
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=8G
-#SBATCH --time=00:30:00
+#SBATCH --time=01:00:00
+#SBATCH --mem=128G
 #SBATCH --output=slurm_output_%A.out
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=daniel.otero.gomez@student.uva.nl
@@ -21,7 +23,11 @@ module load Anaconda3/2025.06-1
 source activate touch_from_segmentation
 
 cd "$HOME/Touch_Breaks_Feelings"
+export HF_HOME="/scratch-shared/$USER/huggingface_cache"
+export PYTHONUTF8=1
 
 python qwen_baseline/finetuning_qwen.py \
-    --train_path data/epic_kitchens/annotations/train.json \
-    --eval_path data/epic_kitchens/annotations/val.json
+    --train_path /gpfs/scratch1/shared/dotero/epic_kitchen/annotations/train.json \
+    --eval_path /gpfs/scratch1/shared/dotero/epic_kitchen/annotations/val.json \
+    --wandb \
+    --wandb_project "qwen-ft-epic-kitchen-touch"
