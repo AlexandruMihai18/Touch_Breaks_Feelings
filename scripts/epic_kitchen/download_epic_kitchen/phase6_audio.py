@@ -7,15 +7,26 @@ downloading the full video to disk.
 
 import shutil
 import subprocess
-from pathlib import Path
-
+import time
 import urllib.request
+from pathlib import Path
 
 from .constants import EK100_VIDEO_BASE, EK55_VIDEO_BASE
 from .failure_log import FailureLog
 
 _AUDIO_EXT      = "m4a"  # AAC in MP4 container — readable by soundfile/librosa without ffmpeg fallback
-_FFMPEG_TIMEOUT = 3600   # seconds per video — EK100 videos run up to ~30 min; ffmpeg ~2× realtime
+_FFMPEG_TIMEOUT = 1800   # hard wall-clock limit per attempt (30 min covers the longest EK100 videos)
+_STALL_TIMEOUT  = 60     # microseconds × 1e6: kill ffmpeg if no data arrives for this many seconds
+_MAX_RETRIES    = 3      # attempts before giving up on a video
+_RETRY_DELAY    = 10     # seconds to wait between retries
+
+# ffmpeg HTTP options that survive transient network stalls and reconnect automatically.
+_FFMPEG_HTTP_OPTS = [
+    "-reconnect",            "1",   # reconnect on connection drop
+    "-reconnect_streamed",   "1",   # reconnect even on streamed (non-seekable) sources
+    "-reconnect_delay_max",  "5",   # cap back-off at 5 s
+    "-rw_timeout", str(_STALL_TIMEOUT * 1_000_000),  # abandon if truly silent for N s
+]
 
 
 def audio_path_for(video_id: str, audio_root: Path) -> Path:
@@ -55,6 +66,25 @@ def _audio_ok(path: Path) -> bool:
     return path.exists() and path.stat().st_size > 0
 
 
+def _attempt(url: str, dest: Path) -> tuple[bool, str]:
+    """Run one ffmpeg attempt. Returns (success, error_detail)."""
+    try:
+        r = subprocess.run(
+            ["ffmpeg", "-y", *_FFMPEG_HTTP_OPTS, "-i", url,
+             "-vn", "-acodec", "copy", str(dest)],
+            capture_output=True,
+            timeout=_FFMPEG_TIMEOUT,
+        )
+        if r.returncode == 0 and _audio_ok(dest):
+            return True, ""
+        return False, f"exit {r.returncode}: {r.stderr.decode(errors='replace')[-300:]}"
+    except subprocess.TimeoutExpired:
+        return False, f"timed out after {_FFMPEG_TIMEOUT}s"
+    finally:
+        if dest.exists() and not _audio_ok(dest):
+            dest.unlink()
+
+
 def _extract(video_id: str, audio_root: Path, flog: FailureLog) -> bool:
     dest = audio_path_for(video_id, audio_root)
     if _audio_ok(dest):
@@ -62,25 +92,19 @@ def _extract(video_id: str, audio_root: Path, flog: FailureLog) -> bool:
 
     audio_root.mkdir(parents=True, exist_ok=True)
     url = _video_url(video_id)
-    try:
-        r = subprocess.run(
-            ["ffmpeg", "-y", "-i", url, "-vn", "-acodec", "copy", str(dest)],
-            capture_output=True,
-            timeout=_FFMPEG_TIMEOUT,
-        )
-        if r.returncode == 0 and _audio_ok(dest):
+
+    for attempt in range(1, _MAX_RETRIES + 1):
+        ok, detail = _attempt(url, dest)
+        if ok:
             return True
-        stderr_tail = r.stderr.decode(errors="replace")[-400:]
-        flog.record("audio", video_id, dest.name, f"ffmpeg exit {r.returncode}: {stderr_tail}")
-        if dest.exists():
-            dest.unlink()
-        return False
-    except subprocess.TimeoutExpired:
-        flog.record("audio", video_id, dest.name,
-                    f"ffmpeg timed out after {_FFMPEG_TIMEOUT}s")
-        if dest.exists():
-            dest.unlink()
-        return False
+        if attempt < _MAX_RETRIES:
+            print(f"\n    attempt {attempt} failed ({detail.splitlines()[-1].strip()}) — "
+                  f"retrying in {_RETRY_DELAY}s …", end=" ", flush=True)
+            time.sleep(_RETRY_DELAY)
+
+    flog.record("audio", video_id, dest.name,
+                f"failed after {_MAX_RETRIES} attempts: {detail}")
+    return False
 
 
 def _check_ffmpeg() -> None:
