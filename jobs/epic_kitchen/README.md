@@ -94,6 +94,29 @@ per-object-category summary CSV.
 
 ---
 
+### `repair_depth_masks.sh`
+
+Recomputes depth PNGs and refined touch masks for entries that are missing or
+zero-byte (e.g. after a disk-full failure during `refine_touch_masks.sh`).
+Skips entries that already have both valid files — safe to re-run.
+
+```bash
+sbatch jobs/epic_kitchen/repair_depth_masks.sh
+```
+
+| Resource | Value |
+| --- | --- |
+| Partition | `gpu_a100` |
+| GPUs | 1 |
+| CPUs | 4 |
+| Time limit | 8 h |
+
+**Notes:** Reads annotations from `/scratch-shared/<user>/epic_kitchen/annotations`.
+Add `--dry-run` inside the script to preview what would be reprocessed without
+writing anything. Run after `refine_touch_masks.sh` has completed (or failed partway).
+
+---
+
 ## Typical run order
 
 ```text
