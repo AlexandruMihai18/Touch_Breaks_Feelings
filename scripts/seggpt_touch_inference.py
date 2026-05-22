@@ -84,6 +84,8 @@ def run_inference(
     dilation: int,
     abs_d_threshold: float,
     local_radius: int,
+    num_jobs: int = 1,
+    job_index: int = 0,
 ) -> list[dict]:
     cfg = _DATASETS[dataset]
     anno_dir: Path = cfg["anno_dir"]
@@ -98,6 +100,13 @@ def run_inference(
     class_names = list(ctx_index.keys())
     if max_classes is not None:
         class_names = rng.sample(class_names, min(max_classes, len(class_names)))
+
+    # Round-robin slice across array tasks; all jobs compute the same class_names
+    # first (same seed) so each gets a deterministic, non-overlapping subset.
+    class_names = class_names[job_index::num_jobs]
+
+    shard_info = f" [job {job_index + 1}/{num_jobs}]" if num_jobs > 1 else ""
+    print(f"Running inference on {len(class_names)} classes{shard_info}", flush=True)
 
     results: list[dict] = []
     n_classes = len(class_names)
@@ -202,6 +211,10 @@ def main() -> None:
         "--output-dir", type=Path, default=_ROOT / "results",
         help="Directory for the output CSV (created if missing).",
     )
+    parser.add_argument("--num-jobs",  type=int, default=1,
+                        help="Total number of parallel SLURM array tasks.")
+    parser.add_argument("--job-index", type=int, default=0,
+                        help="0-based index of this task (SLURM_ARRAY_TASK_ID).")
     args = parser.parse_args()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -214,15 +227,20 @@ def main() -> None:
         dilation=args.dilation,
         abs_d_threshold=args.abs_d_threshold,
         local_radius=args.local_radius,
+        num_jobs=args.num_jobs,
+        job_index=args.job_index,
     )
 
-    out_csv = args.output_dir / f"{args.dataset}_{args.split}_seggpt_touch_results.csv"
+    stem = f"{args.dataset}_{args.split}_seggpt_touch_results"
+    suffix = f"_{args.job_index}" if args.num_jobs > 1 else ""
+    out_csv = args.output_dir / f"{stem}{suffix}.csv"
     with open(out_csv, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=_CSV_FIELDS)
         writer.writeheader()
         writer.writerows(results)
 
-    print(f"\nWrote {len(results)} rows → {out_csv}")
+    shard_label = f" (shard {args.job_index + 1}/{args.num_jobs})" if args.num_jobs > 1 else ""
+    print(f"\nWrote {len(results)} rows → {out_csv}{shard_label}")
     if results:
         _print_metrics(results)
 
