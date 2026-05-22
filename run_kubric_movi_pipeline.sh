@@ -13,6 +13,7 @@ OUTPUT_ROOT="${OUTPUT_ROOT:-$SCRIPT_DIR/data/kubric_movi_a}"
 MAX_VIDEOS="${MAX_VIDEOS:-}"
 TOUCH_RADIUS="${TOUCH_RADIUS:-3}"
 DOWNLOAD_DATASET="${DOWNLOAD_DATASET:-1}"
+DELETE_DOWNLOADED_DATA="${DELETE_DOWNLOADED_DATA:-1}"
 NO_TOUCH_FPS="${NO_TOUCH_FPS:-2}"
 HARD_NEGATIVE_WINDOW="${HARD_NEGATIVE_WINDOW:-4}"
 VIDEO_FPS="${VIDEO_FPS:-12}"
@@ -26,6 +27,7 @@ echo "Split:          $SPLIT"
 echo "Output root:    $OUTPUT_ROOT"
 echo "Touch radius:   $TOUCH_RADIUS"
 echo "Download data:  $DOWNLOAD_DATASET"
+echo "Delete download:$DELETE_DOWNLOADED_DATA"
 echo "No-touch fps:   $NO_TOUCH_FPS"
 echo "Hard neg window:$HARD_NEGATIVE_WINDOW"
 echo "Video fps:      $VIDEO_FPS"
@@ -109,6 +111,15 @@ fi
 
 echo "Running converter..."
 "${cmd[@]}"
+
+if [ "$DELETE_DOWNLOADED_DATA" = "1" ]; then
+  if [ -d "$DATASET_DIR" ] && [ "$DATASET_DIR" != "/" ] && [ "$DATASET_DIR" != "$OUTPUT_ROOT" ]; then
+    echo "Deleting downloaded TFDS files: $DATASET_DIR"
+    rm -rf "$DATASET_DIR"
+  else
+    echo "Skipping downloaded data cleanup; unsafe or missing path: $DATASET_DIR" >&2
+  fi
+fi
 
 echo "Done."
 echo "Annotations: $OUTPUT_ROOT/annotations"
