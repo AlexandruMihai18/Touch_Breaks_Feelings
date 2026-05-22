@@ -71,6 +71,7 @@ CONDA_YAML_PATH="$REPO_DIR/conda_environment.yaml"
   echo "dependencies:"
   echo "  - python=$PY_VER"
   echo "  - pip"
+  echo "  - ffmpeg"
   echo "  - pip:"
   # ---- PyTorch (CUDA 12.4) ----
   echo "    - --extra-index-url https://download.pytorch.org/whl/cu124"

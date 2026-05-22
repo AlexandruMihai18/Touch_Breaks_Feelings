@@ -11,16 +11,19 @@
 #SBATCH --mail-user=daniel.otero.gomez@student.uva.nl
 
 # Standalone Phase 6 re-runner — stream-extracts AAC audio from EK100/EK55
-# HTTP endpoints via ffmpeg.  No GPU needed; I/O-bound.
+# HTTPS endpoints via ffmpeg.  No GPU needed; I/O-bound.
 # Run after phases 1-3 (frames on disk).  Safe to re-run: skips existing .m4a files.
+#
+# IMPORTANT: ffmpeg must have HTTPS/TLS support (conda-forge build has it; the
+# cluster FFmpeg/6.0-GCCcore-12.3.0 module does not).  The conda env already
+# includes ffmpeg from conda-forge — do not load a system FFmpeg module here.
 #
 # To target specific videos instead of the full frames/ tree:
 #   sbatch download_audio.sh --video-ids P01_01 P01_103
 
 module purge
-module load 2023
-module load FFmpeg/6.0-GCCcore-12.3.0
-module load Anaconda3/2023.07-2
+module load 2025
+module load Anaconda3/2025.06-1
 
 source activate touch_from_segmentation
 
