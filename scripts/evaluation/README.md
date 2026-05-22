@@ -2,10 +2,11 @@
 
 Post-training analysis tools that characterise model performance along two spatial dimensions:
 
-| Subfolder | Dimension |
-| --- | --- |
-| `touch_zones/` | Where in the frame (8×8 spatial grid) touch events occur, and model recall per zone |
-| `depth/` | How far from the camera (depth proxy) touch events occur, and model recall per depth bin |
+| Subfolder | Dimension | All samples? |
+| --- | --- | --- |
+| `touch_zones/` | Where in the frame (8×8 spatial grid) touch events occur | touch only |
+| `depth/` | How far from the camera (depth proxy) touch events occur | touch only (GH) |
+| `object_coverage/` | How much of the frame the object occupies | all (touch + no-touch) |
 
 ---
 
@@ -45,8 +46,8 @@ The two annotation steps are independent and can run in either order. Both write
 
 The analysis scripts expect a CSV with at least these columns (extra columns are ignored):
 
-```
-frame_id, video_id, frame_path, audio_path, label, prediction, x_touch, y_touch, depth_touch
+```text
+frame_id, video_id, frame_path, audio_path, label, prediction, x_touch, y_touch, depth_touch, object_coverage
 ```
 
 `label` and `prediction` are binary integers (0 = no-touch, 1 = touch).  
