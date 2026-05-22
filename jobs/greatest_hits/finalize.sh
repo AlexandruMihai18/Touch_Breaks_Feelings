@@ -27,7 +27,7 @@ source activate touch_from_segmentation
 
 cd "$HOME/Touch_Breaks_Feelings"
 
-GH_ROOT="/scratch-local/$(whoami)/greatest_hits"
+GH_ROOT="/scratch-shared/$(whoami)/greatest_hits"
 MASKS_DIR="${GH_ROOT}/masks"
 ANNO_DIR="${GH_ROOT}/annotations"
 DATA_DIR="${GH_ROOT}/vis-data-256/vis-data-256"
