@@ -94,6 +94,30 @@ per-object-category summary CSV.
 
 ---
 
+### `fix_annotation_paths.sh`
+
+Rewrites path prefixes inside every JSON under the annotations directory after
+files have been moved to scratch. Uses `sed` in-place — fast and safe for
+simple prefix swaps.
+
+```bash
+sbatch jobs/epic_kitchen/fix_annotation_paths.sh
+```
+
+| Resource | Value |
+| --- | --- |
+| Partition | `staging` (no GPU) |
+| CPUs | 1 |
+| Memory | 4 GB |
+| Time limit | 10 min |
+
+**Notes:** Edit `OLD_PREFIX` and `NEW_PREFIX` inside the script if the source or
+destination paths differ. Typically run once after `copy_job.sh` completes and
+before any training job that reads the annotations. Idempotent — safe to re-run
+if the prefix is already correct (no-op).
+
+---
+
 ### `repair_depth_masks.sh`
 
 Recomputes depth PNGs and refined touch masks for entries that are missing or
@@ -125,6 +149,8 @@ script to preview what would be reprocessed without writing anything. Run after
 
 ```text
 download_epic_kitchen.sh
+        ↓
+copy_job.sh  →  fix_annotation_paths.sh   (run after copy, before training)
         ↓
 refine_touch_masks.sh
         ↓
