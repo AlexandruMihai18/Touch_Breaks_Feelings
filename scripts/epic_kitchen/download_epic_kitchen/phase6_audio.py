@@ -83,12 +83,27 @@ def _extract(video_id: str, audio_root: Path, flog: FailureLog) -> bool:
         return False
 
 
-def download_audio(sampled: list[dict], audio_root: Path, flog: FailureLog) -> None:
-    """Extract audio for every unique video_id in *sampled*."""
+def _check_ffmpeg() -> None:
     if shutil.which("ffmpeg") is None:
         raise RuntimeError(
             "ffmpeg not found on PATH — install ffmpeg to enable audio download"
         )
+    r = subprocess.run(["ffmpeg", "-protocols"], capture_output=True, text=True)
+    if "https" not in r.stdout.split():
+        raise RuntimeError(
+            "ffmpeg on this system was compiled without HTTPS/TLS support.\n"
+            "On SLURM, try a different module — e.g.:\n"
+            "  module spider FFmpeg          # list available builds\n"
+            "  module load FFmpeg/6.0-GCCcore-12.3.0-HTTPS  # if available\n"
+            "Or install a TLS-enabled ffmpeg locally:\n"
+            "  conda install -c conda-forge ffmpeg\n"
+            "  apt-get install ffmpeg        # Ubuntu — includes gnutls"
+        )
+
+
+def download_audio(sampled: list[dict], audio_root: Path, flog: FailureLog) -> None:
+    """Extract audio for every unique video_id in *sampled*."""
+    _check_ffmpeg()
 
     video_ids = sorted({rec["video_id"] for rec in sampled})
     ok = skip = fail = 0
