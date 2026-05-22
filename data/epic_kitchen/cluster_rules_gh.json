@@ -1,0 +1,125 @@
+{
+  "explicit": {
+    "plate": "Ceramic",
+    "mug": "Ceramic",
+    "cup": "Ceramic",
+    "bowl": "Ceramic",
+    "colander": "Ceramic",
+    "jar": "Ceramic",
+    "jug": "Ceramic",
+    "cloth": "Cloth",
+    "tea towel": "Cloth",
+    "glove": "Cloth",
+    "right glove": "Cloth",
+    "left glove": "Cloth",
+    "clothes": "Cloth",
+    "rag": "Cloth",
+    "towel": "Cloth",
+    "kitchen towel": "Cloth",
+    "sponge": "Cloth",
+    "glass": "Glass",
+    "bottle": "Glass",
+    "milk bottle": "Glass",
+    "oil bottle": "Glass",
+    "olive oil bottle": "Glass",
+    "salt bottle": "Glass",
+    "plastic bag": "Plastic bag",
+    "bag": "Plastic bag",
+    "packaging": "Plastic bag",
+    "flour bag": "Plastic bag",
+    "pasta bag": "Plastic bag",
+    "cereal bag": "Plastic bag",
+    "mozzarella package": "Plastic bag",
+    "baking paper": "Plastic bag",
+    "water": "Water",
+    "tap": "Water",
+    "sink": "Water",
+    "water filter": "Water",
+    "wooden spoon": "Wood",
+    "chopping board": "Wood",
+    "drawer": "Wood",
+    "cupboard": "Wood",
+    "chopstick": "Wood",
+    "scourer": "Cloth",
+    "place mat": "Cloth",
+    "mesh": "Cloth",
+    "cling film": "Plastic bag",
+    "foil": "Plastic bag",
+    "wrap": "Plastic bag",
+    "plastic": "Plastic bag",
+    "packet": "Plastic bag",
+    "bread packet": "Plastic bag",
+    "cheese packet": "Plastic bag",
+    "tub": "Ceramic"
+  },
+  "keyword_rules": [
+    [
+      "wooden",
+      "Wood"
+    ],
+    [
+      "wood",
+      "Wood"
+    ],
+    [
+      "cloth",
+      "Cloth"
+    ],
+    [
+      "towel",
+      "Cloth"
+    ],
+    [
+      "glove",
+      "Cloth"
+    ],
+    [
+      "glass",
+      "Glass"
+    ],
+    [
+      "bottle",
+      "Glass"
+    ],
+    [
+      "bag",
+      "Plastic bag"
+    ],
+    [
+      "plastic",
+      "Plastic bag"
+    ],
+    [
+      "wrap",
+      "Plastic bag"
+    ],
+    [
+      "water",
+      "Water"
+    ],
+    [
+      "tap",
+      "Water"
+    ],
+    [
+      "ceramic",
+      "Ceramic"
+    ],
+    [
+      "mug",
+      "Ceramic"
+    ],
+    [
+      "plate",
+      "Ceramic"
+    ],
+    [
+      "bowl",
+      "Ceramic"
+    ],
+    [
+      "cup",
+      "Ceramic"
+    ]
+  ]
+}
