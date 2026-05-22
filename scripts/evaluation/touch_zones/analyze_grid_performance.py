@@ -22,12 +22,16 @@ Usage
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from utils import enrich_df
 
 
 # ---------------------------------------------------------------------------
@@ -129,12 +133,17 @@ def main() -> None:
                         help="Grid dimension — must match what was used in annotate_touch_zones.py (default: 8)")
     parser.add_argument("--output", type=Path, default=None,
                         help="Output PNG path (default: <csv_stem>_heatmap.png next to the CSV)")
+    parser.add_argument("--annotations", nargs="+", type=Path, default=None,
+                        help="Annotation JSON file(s) to join x_touch/y_touch into the CSV")
     args = parser.parse_args()
 
     if not args.csv.exists():
         raise FileNotFoundError(args.csv)
 
     df = pd.read_csv(args.csv)
+    if args.annotations:
+        df = enrich_df(df, args.annotations)
+
     required = {"label", "prediction", "x_touch", "y_touch"}
     if missing := required - set(df.columns):
         raise ValueError(f"CSV is missing columns: {missing}")

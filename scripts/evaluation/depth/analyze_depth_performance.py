@@ -13,12 +13,16 @@ Usage
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from utils import enrich_df
 
 
 def compute_bin_stats(df: pd.DataFrame, n_bins: int) -> pd.DataFrame:
@@ -90,12 +94,17 @@ def main() -> None:
     parser.add_argument("--n-bins", type=int, default=5,
                         help="Number of quantile depth bins (default: 5)")
     parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument("--annotations", nargs="+", type=Path, default=None,
+                        help="Annotation JSON file(s) to join depth_touch into the CSV")
     args = parser.parse_args()
 
     if not args.csv.exists():
         raise FileNotFoundError(args.csv)
 
     df = pd.read_csv(args.csv)
+    if args.annotations:
+        df = enrich_df(df, args.annotations)
+
     required = {"label", "prediction", "depth_touch"}
     if missing := required - set(df.columns):
         raise ValueError(f"CSV missing columns: {missing}")
