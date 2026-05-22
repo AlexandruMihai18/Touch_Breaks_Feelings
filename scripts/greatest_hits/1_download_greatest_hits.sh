@@ -112,9 +112,7 @@ done
 if [[ "$USE_SCRATCH" == true ]]; then
   SCRATCH_USER="$(whoami)"
   SCRATCH_BASE="/scratch-local/${SCRATCH_USER}"
-  if [[ ! -d "$SCRATCH_BASE" ]]; then
-    die "Scratch-local directory not found: $SCRATCH_BASE — are you on a Snellius node?"
-  fi
+  mkdir -p "$SCRATCH_BASE"
   DEST_DIR="${SCRATCH_BASE}/greatest_hits"
   log "Scratch mode enabled → using /scratch-local/${SCRATCH_USER}/greatest_hits"
   log "WARNING: scratch-local files older than 6 days are deleted automatically. Copy results to your home or project space when done."
