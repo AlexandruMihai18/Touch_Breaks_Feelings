@@ -144,16 +144,15 @@ def annotate_folder(
 
     for frame, fp in zip(frames, frame_paths):
         frame_idx = int(fp.stem.split("_")[1])
-        result, reason = annotate_frame(
+        ann_entry, dataset_row = annotate_frame(
             frame, frame_idx, fp.stem, touch_materials, out_dir, **params
         )
-        if result is None:
-            if reason == "stick":
+        if ann_entry is None:
+            if dataset_row == "stick":
                 n_stick_miss += 1
             else:
                 n_obj_miss += 1
             continue
-        ann_entry, dataset_row = result
         frame_entries.append(ann_entry)
         dataset_rows.append(dataset_row)
 
