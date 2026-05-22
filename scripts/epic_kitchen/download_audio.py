@@ -38,11 +38,15 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--audio-dir",   default=None,
                    help="Override audio output dir (default: <data-dir>/audio).")
     p.add_argument("--failure-log", default=None,
-                   help="Path to failure log (default: <data-dir>/failures_audio.json).")
+                   help="Path to failure log (default: <data-dir>/failures_audio[_<job-index>].json).")
     p.add_argument("--video-ids",   nargs="+", default=None,
                    metavar="VIDEO_ID",
                    help="Explicit list of video IDs to process. "
                         "Defaults to all IDs found under frames/.")
+    p.add_argument("--num-jobs",    type=int, default=1,
+                   help="Total number of parallel SLURM array tasks.")
+    p.add_argument("--job-index",   type=int, default=0,
+                   help="0-based index of this task within the array (SLURM_ARRAY_TASK_ID).")
     return p.parse_args()
 
 
@@ -50,7 +54,14 @@ def main() -> None:
     args     = parse_args()
     data_dir = Path(args.data_dir)
     audio_root = Path(args.audio_dir) if args.audio_dir else data_dir / "audio"
-    flog_path  = Path(args.failure_log) if args.failure_log else data_dir / "failures_audio.json"
+
+    # Per-shard failure log when running as an array job.
+    if args.failure_log:
+        flog_path = Path(args.failure_log)
+    elif args.num_jobs > 1:
+        flog_path = data_dir / f"failures_audio_{args.job_index}.json"
+    else:
+        flog_path = data_dir / "failures_audio.json"
 
     if shutil.which("ffmpeg") is None:
         print("ERROR: ffmpeg not found on PATH.", file=sys.stderr)
@@ -66,14 +77,18 @@ def main() -> None:
                   file=sys.stderr)
             sys.exit(1)
 
+    # Round-robin slice: job i handles indices i, i+num_jobs, i+2*num_jobs, …
+    shard = video_ids[args.job_index::args.num_jobs]
+
     print("=" * 60)
     print("  Phase 6 — Audio extraction (standalone)")
-    print(f"  video IDs  : {len(video_ids)}")
+    print(f"  job        : {args.job_index + 1}/{args.num_jobs}")
+    print(f"  video IDs  : {len(shard)} of {len(video_ids)} total")
     print(f"  audio dir  : {audio_root}")
     print(f"  failure log: {flog_path}")
     print("=" * 60)
 
-    sampled = [{"video_id": vid} for vid in video_ids]
+    sampled = [{"video_id": vid} for vid in shard]
     flog    = FailureLog(flog_path)
     download_audio(sampled, audio_root, flog)
     flog.flush()
