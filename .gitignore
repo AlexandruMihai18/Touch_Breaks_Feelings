@@ -24,6 +24,7 @@ prepared_data/
 !**/data/**/sample_context_frames.json
 **/data/**/*.wav
 **/data/**/*.zip
+*.m4a
 
 # Experimentation
 wandb/
