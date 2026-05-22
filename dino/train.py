@@ -166,6 +166,9 @@ def _save_loss_plot(train_losses: list[float], val_losses: list[float], path: Pa
 def train(args) -> dict:
     from transformers import AutoImageProcessor, AutoModel
 
+    if args.head_type == "mlp" and args.mlp_layers < 2:
+        raise ValueError("--mlp-layers must be >= 2 when --head-type mlp")
+
     device = device_from_args(args.device)
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -228,7 +231,12 @@ def train(args) -> dict:
         raise explain_hf_load_error(exc, args.model_id) from exc
     encoder.eval()
 
-    model = DinoClassifier(encoder, head_type=args.head_type, num_classes=2).to(device)
+    model = DinoClassifier(
+        encoder,
+        head_type=args.head_type,
+        mlp_layers=args.mlp_layers,
+        num_classes=2,
+    ).to(device)
     optimizer = Adam(model.head.parameters(), lr=args.lr)
     criterion = nn.SmoothL1Loss() if args.task == "point" else nn.CrossEntropyLoss()
 
@@ -295,6 +303,7 @@ def train(args) -> dict:
             "model_id": args.model_id,
             "hidden_size": getattr(encoder.config, "hidden_size", None),
             "head_type": args.head_type,
+            "mlp_layers": args.mlp_layers,
             "task": args.task,
             "label_map": {"no-touch": 0, "touch": 1},
         },
@@ -311,13 +320,19 @@ def train(args) -> dict:
     else:
         metrics = compute_metrics(preds, labels, datasets)
     dataset_name = dataset_output_name(datasets)
-    predictions_path = output_dir / prediction_csv_name(dataset_name, args.task, args.head_type)
+    predictions_path = output_dir / prediction_csv_name(
+        dataset_name,
+        args.task,
+        args.head_type,
+        args.mlp_layers,
+    )
     metrics.update(
         {
             "best_val_loss": best_val_loss,
             "checkpoint": str(checkpoint_path),
             "model_id": args.model_id,
             "head_type": args.head_type,
+            "mlp_layers": args.mlp_layers,
             "task": args.task,
             "predictions_csv": str(predictions_path),
             "hyperparameters": config,

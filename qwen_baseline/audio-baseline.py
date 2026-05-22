@@ -30,12 +30,15 @@ def generate_predicted_labels(predicted_touch_times, touch_times):
     predicted_labels = []
     
     for pred_times, true_times in zip(predicted_touch_times, touch_times):
+        
+        hit = False
         for true_time in true_times:
             if any(abs(pred_time - true_time) <= TOLERANCE for pred_time in pred_times):
-                predicted_labels.append(1)
-            else:
-                predicted_labels.append(0)
-    
+                hit = True
+                break
+
+        predicted_labels.append(1 if hit else 0)
+ 
     return predicted_labels
 
 def predict_touch_times_for_audio(
@@ -88,7 +91,7 @@ if __name__ == "__main__":
     data = load_data(args.dataset)
 
     processor = AutoProcessor.from_pretrained(AUDIO_MODEL_ID)
-    model = Qwen2AudioForConditionalGeneration.from_pretrained(AUDIO_MODEL_ID).cuda()
+    model = Qwen2AudioForConditionalGeneration.from_pretrained(AUDIO_MODEL_ID, device_map="auto")
 
     audio_paths = data["audio_paths"]
     video_ids = data["video_ids"]
@@ -112,4 +115,6 @@ if __name__ == "__main__":
         'x_touch': [None] * len(predicted_labels),
         'y_touch': [None] * len(predicted_labels),
     })
+
+    results.to_csv(f'results/{args.dataset}_qwen2_audio_baseline_predictions.csv', index=False)
 

@@ -125,8 +125,14 @@ def compute_point_metrics(
     }
 
 
-def prediction_csv_name(dataset_name: str, task: str, head_type: str) -> str:
-    return f"{dataset_name}_dino_{task}_{head_type}_prediction.csv"
+def prediction_csv_name(
+    dataset_name: str,
+    task: str,
+    head_type: str,
+    mlp_layers: int | None = None,
+) -> str:
+    head_name = f"mlp{mlp_layers}" if head_type == "mlp" and mlp_layers is not None else head_type
+    return f"{dataset_name}_dino_{task}_{head_name}_prediction.csv"
 
 
 def dataset_output_name(datasets: list[str]) -> str:
@@ -209,6 +215,7 @@ def evaluate_samples(
     num_workers: int,
     device: torch.device,
     head_type: str | None = None,
+    mlp_layers: int | None = None,
     predictions_out: str | Path | None = None,
     task: str | None = None,
 ) -> dict:
@@ -218,8 +225,19 @@ def evaluate_samples(
     resolved_head_type = head_type or (
         state.get("head_type") if isinstance(state, dict) else None
     ) or "mlp"
+    checkpoint_mlp_layers = state.get("mlp_layers") if isinstance(state, dict) else None
+    resolved_mlp_layers = mlp_layers if mlp_layers is not None else checkpoint_mlp_layers
+    if resolved_mlp_layers is None:
+        resolved_mlp_layers = 2
+    if resolved_head_type == "mlp" and resolved_mlp_layers < 2:
+        raise ValueError("MLP heads need at least 2 linear layers")
     resolved_task = task or (state.get("task") if isinstance(state, dict) else None) or "binary"
-    model = DinoClassifier(encoder, head_type=resolved_head_type, num_classes=2).to(device)
+    model = DinoClassifier(
+        encoder,
+        head_type=resolved_head_type,
+        mlp_layers=resolved_mlp_layers,
+        num_classes=2,
+    ).to(device)
     if isinstance(state, dict) and "head_state_dict" in state:
         model.head.load_state_dict(state["head_state_dict"])
     else:

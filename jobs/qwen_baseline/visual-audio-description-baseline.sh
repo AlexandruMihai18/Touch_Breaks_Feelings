@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --partition=gpu_a100
+#SBATCH --partition=gpu_mig
 #SBATCH --gpus=1
 #SBATCH --job-name=visual-audio-baseline
 #SBATCH --ntasks=1
@@ -9,7 +9,7 @@
 #SBATCH --time=08:00:00
 #SBATCH --output=slurm_output_%A.out
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --mail-user=daniel.otero.gomez@student.uva.nl
+#SBATCH --mail-user=alexandru.mihai@student.uva.nl
 
 module purge
 module load 2025

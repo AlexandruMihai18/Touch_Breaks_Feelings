@@ -16,8 +16,10 @@ module load Anaconda3/2025.06-1
 
 cd "$HOME/Touch_Breaks_Feelings"
 
+source activate kubric_movi
+
 DATASET=movi_a/256x256 \
-SPLIT=validation \
-DATA_DIR=/scratch-shared/$USER/touch_breaks_feelings/kubric_tfds \
-OUTPUT_ROOT=/scratch-shared/$USER/touch_breaks_feelings/kubric_movi_a_256 \
+SPLIT=train \
+DATA_DIR=/scratch-shared/$USER/kubric/kubric_tfds \
+OUTPUT_ROOT=/scratch-shared/$USER/kubric_movi_a_256  \
 ./run_kubric_movi_pipeline.sh

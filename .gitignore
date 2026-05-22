@@ -27,6 +27,7 @@ prepared_data/
 **/data/**/*.wav
 **/data/**/*.zip
 *.m4a
+*.csv
 
 # Experimentation
 wandb/
