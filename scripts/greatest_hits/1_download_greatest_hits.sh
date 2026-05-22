@@ -19,16 +19,18 @@ usage() {
 Usage: $0 [OPTIONS]
 
 Options:
-  --full       Download full-resolution videos + labels  (~50 GB)
-  --low        Download low-resolution  videos + labels  (~20 GB)
-  --features   Download precomputed sound features       (~ 1 GB)
-  --all        Download everything
-  --dir DIR    Target directory (default: ./greatest_hits_data)
-  -h, --help   Show this help
+  --full         Download full-resolution videos + labels  (~50 GB)
+  --low          Download low-resolution  videos + labels  (~20 GB)
+  --features     Download precomputed sound features       (~ 1 GB)
+  --all          Download everything
+  --dir DIR      Target directory (default: <script>/../data/greatest_hits)
+  --scratch      Download to Snellius scratch-local: /scratch-local/<user>/greatest_hits
+  -h, --help     Show this help
 
 Examples:
-  $0 --low                  # recommended starting point
+  $0 --low                         # recommended starting point
   $0 --all --dir /data/vis
+  $0 --low --scratch               # download to /scratch-local/<user>/greatest_hits
 USAGE
   exit 0
 }
@@ -86,6 +88,7 @@ download() {
 DO_FULL=false
 DO_LOW=false
 DO_FEATURES=false
+USE_SCRATCH=false
 SCRIPT_PATH="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/$(basename -- "${BASH_SOURCE[0]}")"
 DEST_DIR="$(dirname "$SCRIPT_PATH")/../../data/greatest_hits"
 
@@ -98,11 +101,24 @@ while [[ $# -gt 0 ]]; do
     --features) DO_FEATURES=true ;;
     --all)      DO_FULL=true; DO_LOW=true; DO_FEATURES=true ;;
     --dir)      shift; DEST_DIR="$1" ;;
+    --scratch)  USE_SCRATCH=true ;;
     -h|--help)  usage ;;
     *) die "Unknown option: $1" ;;
   esac
   shift
 done
+
+# --scratch overrides --dir; resolve username at runtime via $(whoami)
+if [[ "$USE_SCRATCH" == true ]]; then
+  SCRATCH_USER="$(whoami)"
+  SCRATCH_BASE="/scratch-local/${SCRATCH_USER}"
+  if [[ ! -d "$SCRATCH_BASE" ]]; then
+    die "Scratch-local directory not found: $SCRATCH_BASE — are you on a Snellius node?"
+  fi
+  DEST_DIR="${SCRATCH_BASE}/greatest_hits"
+  log "Scratch mode enabled → using /scratch-local/${SCRATCH_USER}/greatest_hits"
+  log "WARNING: scratch-local files older than 6 days are deleted automatically. Copy results to your home or project space when done."
+fi
 
 # ---------- download ---------------------------------------------------------
 mkdir -p "$DEST_DIR"

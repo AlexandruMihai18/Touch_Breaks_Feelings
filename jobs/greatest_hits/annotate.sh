@@ -25,7 +25,11 @@ source activate touch_from_segmentation
 
 cd "$HOME/Touch_Breaks_Feelings"
 
+GH_ROOT="/scratch-local/$(whoami)/greatest_hits"
+
 python scripts/greatest_hits/4_annotate_greatest_hits.py \
+    --frames-dir "${GH_ROOT}/frames" \
+    --masks-dir  "${GH_ROOT}/masks" \
     --dilation 10 \
     --abs-d-threshold 0.05 \
     --local-radius 10 \
