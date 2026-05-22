@@ -44,18 +44,18 @@ download() {
   filename="$(basename "$url")"
   local filepath="${dest}/${filename}"
 
-  # Validate existing file, re-download if corrupted
+  local _valid=false
   if [[ -f "$filepath" ]]; then
-    log "Validating existing file: $filename ..."
+    log "Found existing file: $filename — validating ..."
     if unzip -t "$filepath" &>/dev/null; then
       log "File is valid, skipping download: $filename"
+      _valid=true
     else
-      log "File is corrupted, deleting and re-downloading: $filename"
-      rm -f "$filepath"
+      log "Incomplete file detected, resuming download: $filename"
     fi
   fi
 
-  if [[ ! -f "$filepath" ]]; then
+  if [[ "$_valid" == false ]]; then
     log "Downloading $filename ..."
     if command -v wget &>/dev/null; then
       wget --no-check-certificate --progress=bar:force:noscroll -c -O "$filepath" "$url"
