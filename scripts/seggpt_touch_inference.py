@@ -42,7 +42,7 @@ _DATASETS = {
 
 _CSV_FIELDS = [
     "frame_id", "video_id", "frame_path", "audio_path",
-    "label", "prediction", "x_touch", "y_touch",
+    "label", "prediction", "x_touch", "y_touch", "iou",
 ]
 
 
@@ -56,6 +56,15 @@ def _load_mask(path: str) -> np.ndarray:
 
 def _frame_id(image_path: str) -> str:
     return Path(image_path).stem
+
+
+def _compute_iou(pred: np.ndarray, gt: np.ndarray) -> float:
+    """Pixel-level Jaccard IoU between two uint8 masks. Returns 1.0 when both are empty."""
+    pred_bool = pred > 127
+    gt_bool = gt > 127
+    intersection = (pred_bool & gt_bool).sum()
+    union = (pred_bool | gt_bool).sum()
+    return float(intersection / union) if union > 0 else 1.0
 
 
 def _make_label_map(agent_mask: np.ndarray, obj_mask: np.ndarray) -> np.ndarray:
@@ -155,6 +164,15 @@ def run_inference(
             label = 1 if qry.get("type") == "touch" else 0
             prediction = 1 if touch_mask.any() else 0
 
+            iou: float | None = None
+            gt_path = qry.get("target_path")
+            if gt_path:
+                try:
+                    gt_touch = _load_mask(gt_path)
+                    iou = _compute_iou(touch_mask, gt_touch)
+                except (FileNotFoundError, OSError):
+                    pass
+
             results.append({
                 "frame_id": _frame_id(qry["image_path"]),
                 "video_id": qry["video_id"],
@@ -164,6 +182,7 @@ def run_inference(
                 "prediction": prediction,
                 "x_touch": None,
                 "y_touch": None,
+                "iou": iou,
             })
 
             if q_i % 10 == 0 or q_i == len(queries):
@@ -184,6 +203,9 @@ def _print_metrics(results: list[dict]) -> None:
     prec = tp / (tp + fp) if (tp + fp) else 0.0
     rec = tp / (tp + fn) if (tp + fn) else 0.0
     f1 = 2 * prec * rec / (prec + rec) if (prec + rec) else 0.0
+    iou_vals = [r["iou"] for r in results if r.get("iou") is not None]
+    mean_iou = sum(iou_vals) / len(iou_vals) if iou_vals else None
+
     sep = "─" * 40
     print(f"\n{sep}")
     print(f"  Samples   : {n}")
@@ -191,6 +213,8 @@ def _print_metrics(results: list[dict]) -> None:
     print(f"  Precision : {prec:.4f}")
     print(f"  Recall    : {rec:.4f}")
     print(f"  F1        : {f1:.4f}")
+    if mean_iou is not None:
+        print(f"  Mean IoU  : {mean_iou:.4f}  (n={len(iou_vals)})")
     print(f"  TP={tp}  TN={tn}  FP={fp}  FN={fn}")
     print(sep)
 
