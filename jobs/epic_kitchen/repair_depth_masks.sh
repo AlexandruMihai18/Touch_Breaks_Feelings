@@ -6,13 +6,22 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --time=08:00:00
-#SBATCH --output=slurm_output_%A.out
+#SBATCH --array=0-3                          # 4 parallel tasks (indices 0-3)
+#SBATCH --output=slurm_output_%A_%a.out
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=daniel.otero.gomez@student.uva.nl
 
-# Recompute depth PNGs and refined touch masks that are missing or zero-byte
-# (e.g. from a prior run that hit the disk-full error).
+# Parallelised depth-mask repair — each array task handles 1/NUM_JOBS of the
+# entries that have missing or zero-byte depth/refined files (round-robin).
 # Skips entries that already have both valid files — safe to re-run.
+#
+# JSON annotation files are NOT updated by the workers to avoid concurrent
+# writes. Run refine_touch_masks.sh (without --overwrite) after all tasks
+# finish to backfill the depth_path field.
+#
+# To change parallelism: update --array and NUM_JOBS together.
+
+NUM_JOBS=4   # must match the upper bound of --array + 1
 
 module purge
 module load 2025
@@ -32,5 +41,7 @@ python scripts/epic_kitchen/repair_depth_masks.py \
     --local-radius 10 \
     --guided-filter \
     --refine-radius 4 \
-    --refine-eps 0.1
+    --refine-eps 0.1 \
+    --num-jobs  "$NUM_JOBS" \
+    --job-index "$SLURM_ARRAY_TASK_ID"
     # Add --dry-run to preview what would be reprocessed without writing.

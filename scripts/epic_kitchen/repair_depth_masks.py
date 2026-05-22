@@ -43,6 +43,10 @@ def parse_args():
     p.add_argument("--guided-filter", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--refine-radius", type=int, default=4)
     p.add_argument("--refine-eps", type=float, default=0.1)
+    p.add_argument("--num-jobs", type=int, default=1,
+                   help="Total number of parallel SLURM array tasks.")
+    p.add_argument("--job-index", type=int, default=0,
+                   help="0-based index of this task (SLURM_ARRAY_TASK_ID).")
     p.add_argument("--dry-run", action="store_true",
                    help="Report what would be reprocessed without writing anything.")
     return p.parse_args()
@@ -137,10 +141,14 @@ def main():
     args = parse_args()
     anno_dir = Path(args.anno_dir)
 
+    parallel = args.num_jobs > 1
+
     print("=" * 60)
     print("  Depth mask repair")
     print(f"  anno dir  : {anno_dir}")
     print(f"  splits    : {args.splits}")
+    if parallel:
+        print(f"  job       : {args.job_index + 1}/{args.num_jobs}")
     print(f"  dry run   : {args.dry_run}")
     print("=" * 60)
 
@@ -156,27 +164,32 @@ def main():
                 e["touch_mask_path"] = e["target_path"]
 
         need_repair = [e for e in entries if any(_needs_repair(e))]
-        print(f"\n  [{split}]  {len(entries):,} total  |  {len(need_repair):,} need repair")
 
-        if not need_repair:
+        # Round-robin shard: job i handles indices i, i+num_jobs, i+2*num_jobs, …
+        shard = need_repair[args.job_index::args.num_jobs]
+
+        print(f"\n  [{split}]  {len(entries):,} total  |  "
+              f"{len(need_repair):,} need repair  |  {len(shard):,} this shard")
+
+        if not shard:
             print("  Nothing to do.")
             continue
 
         if args.dry_run:
-            for e in need_repair[:5]:
+            for e in shard[:5]:
                 src = _touch_src(e)
                 nd, nr = _needs_repair(e)
                 flags = ("depth " if nd else "") + ("refined" if nr else "")
                 print(f"    would repair [{flags.strip()}]: {Path(src).name}")
-            if len(need_repair) > 5:
-                print(f"    … and {len(need_repair) - 5} more")
+            if len(shard) > 5:
+                print(f"    … and {len(shard) - 5} more")
             continue
 
         print("  Loading depth model…")
         ok = errors = 0
-        total = len(need_repair)
+        total = len(shard)
 
-        for i, entry in enumerate(need_repair, 1):
+        for i, entry in enumerate(shard, 1):
             result = _repair_entry(entry, args)
             if result == "ok":
                 ok += 1
@@ -186,10 +199,14 @@ def main():
                 print(f"  {i}/{total}  ✓{ok}  err={errors}", end="\r", flush=True)
 
         print()
-
-        path.write_text(json.dumps(entries, indent=2))
-        print(f"  ✎ Updated {path.name}")
         print(f"  Repaired={ok}  Errors={errors}")
+
+        # JSON write-back is skipped in parallel mode to avoid concurrent writes.
+        # Run refine_touch_masks.py (without --overwrite) afterwards to update
+        # depth_path in the annotation files.
+        if not parallel:
+            path.write_text(json.dumps(entries, indent=2))
+            print(f"  ✎ Updated {path.name}")
 
     print("\n" + "=" * 60)
     print("Done.")

@@ -112,8 +112,12 @@ sbatch jobs/epic_kitchen/repair_depth_masks.sh
 | Time limit | 8 h |
 
 **Notes:** Reads annotations from `/scratch-shared/<user>/epic_kitchen/annotations`.
-Add `--dry-run` inside the script to preview what would be reprocessed without
-writing anything. Run after `refine_touch_masks.sh` has completed (or failed partway).
+Uses a 4-task SLURM array; update `--array` and `NUM_JOBS` together to change
+parallelism. Workers do not write back to the annotation JSON (to avoid
+concurrent writes) — run `refine_touch_masks.sh` without `--overwrite`
+afterwards to backfill the `depth_path` field. Add `--dry-run` inside the
+script to preview what would be reprocessed without writing anything. Run after
+`refine_touch_masks.sh` has completed (or failed partway).
 
 ---
 
