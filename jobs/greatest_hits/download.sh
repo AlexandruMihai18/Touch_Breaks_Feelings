@@ -20,4 +20,4 @@ module load Anaconda3/2025.06-1
 
 cd "$HOME/Touch_Breaks_Feelings"
 
-bash scripts/greatest_hits/1_download_greatest_hits.sh --low
+bash scripts/greatest_hits/1_download_greatest_hits.sh --low --scratch

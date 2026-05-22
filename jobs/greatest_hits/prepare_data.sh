@@ -27,9 +27,10 @@ source activate touch_from_segmentation
 
 cd "$HOME/Touch_Breaks_Feelings"
 
-DATA_DIR="data/greatest_hits/vis-data-256/vis-data-256"
-FRAMES_DIR="data/greatest_hits/frames"
-ANNO_DIR="data/greatest_hits/annotations"
+GH_ROOT="/scratch-local/$(whoami)/greatest_hits"
+DATA_DIR="${GH_ROOT}/vis-data-256/vis-data-256"
+FRAMES_DIR="${GH_ROOT}/frames"
+ANNO_DIR="${GH_ROOT}/annotations"
 
 # Step 1 — extract frames
 python scripts/greatest_hits/2_extract_greatest_hits_frames.py \

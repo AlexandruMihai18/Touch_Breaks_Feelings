@@ -27,9 +27,10 @@ source activate touch_from_segmentation
 
 cd "$HOME/Touch_Breaks_Feelings"
 
-MASKS_DIR="data/greatest_hits/masks"
-ANNO_DIR="data/greatest_hits/annotations"
-DATA_DIR="data/greatest_hits/vis-data-256/vis-data-256"
+GH_ROOT="/scratch-local/$(whoami)/greatest_hits"
+MASKS_DIR="${GH_ROOT}/masks"
+ANNO_DIR="${GH_ROOT}/annotations"
+DATA_DIR="${GH_ROOT}/vis-data-256/vis-data-256"
 
 # Step 1 — enrich annotations with mask paths + build ctx_index
 python scripts/greatest_hits/5_generate_gh_mask_annotations.py \
