@@ -77,7 +77,13 @@ def parse_args() -> argparse.Namespace:
         "--head-type",
         choices=HEAD_TYPES,
         default="mlp",
-        help="Classifier head architecture: one linear layer or a two-layer MLP.",
+        help="Classifier head architecture: one linear layer or an MLP.",
+    )
+    train_parser.add_argument(
+        "--mlp-layers",
+        type=int,
+        default=2,
+        help="Number of linear layers in the MLP head. Ignored when --head-type linear.",
     )
     train_parser.add_argument("--wandb", action="store_true", help="Enable Weights & Biases logging.")
     train_parser.add_argument("--wandb-project", default="dino-touch")
@@ -115,6 +121,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Override classifier head architecture. Defaults to the value saved in the checkpoint.",
     )
+    eval_parser.add_argument(
+        "--mlp-layers",
+        type=int,
+        default=None,
+        help="Override MLP head depth. Defaults to the value saved in the checkpoint.",
+    )
     eval_parser.add_argument("--metrics-out", type=Path, default=Path("checkpoints/dino/eval_metrics.json"))
     eval_parser.add_argument(
         "--predictions-out",
@@ -137,6 +149,12 @@ def evaluate_command(args: argparse.Namespace) -> dict:
     head_type = args.head_type or (
         checkpoint.get("head_type") if isinstance(checkpoint, dict) else None
     ) or "mlp"
+    checkpoint_mlp_layers = checkpoint.get("mlp_layers") if isinstance(checkpoint, dict) else None
+    mlp_layers = args.mlp_layers if args.mlp_layers is not None else checkpoint_mlp_layers
+    if mlp_layers is None:
+        mlp_layers = 2
+    if head_type == "mlp" and mlp_layers < 2:
+        raise ValueError("--mlp-layers must be >= 2 when evaluating an MLP head")
 
     splits = load_splits(
         datasets=args.datasets,
@@ -152,7 +170,7 @@ def evaluate_command(args: argparse.Namespace) -> dict:
         print(f"Point evaluation: skipped {skipped} non-touch/missing-mask samples")
     dataset_name = dataset_output_name([sample.dataset for sample in test_samples])
     predictions_out = args.predictions_out or (
-        args.metrics_out.parent / prediction_csv_name(dataset_name, task, head_type)
+        args.metrics_out.parent / prediction_csv_name(dataset_name, task, head_type, mlp_layers)
     )
     device = device_from_args(args.device)
     try:
@@ -178,12 +196,14 @@ def evaluate_command(args: argparse.Namespace) -> dict:
         num_workers=args.num_workers,
         device=device,
         head_type=head_type,
+        mlp_layers=mlp_layers,
         predictions_out=predictions_out,
         task=task,
     )
     metrics["model_id"] = model_id
     metrics["task"] = task
     metrics["head_type"] = head_type
+    metrics["mlp_layers"] = mlp_layers
     metrics["predictions_csv"] = str(predictions_out)
     save_metrics(metrics, args.metrics_out)
     print(json.dumps(metrics, indent=2))

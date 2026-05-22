@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import random
-import hashlib
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -218,9 +217,10 @@ class DinoFrameDataset(Dataset):
         if len(xs) == 0:
             raise ValueError(f"Point task sample has empty touch mask: {sample.target_path}")
 
-        key = f"{self.seed}:{sample.dataset}:{sample.video_id}:{sample.frame_id}:{sample.image_path}"
-        digest = hashlib.sha256(key.encode("utf-8")).digest()
-        point_idx = int.from_bytes(digest[:8], "big") % len(xs)
+        mean_x = xs.mean()
+        mean_y = ys.mean()
+        distances = (xs - mean_x) ** 2 + (ys - mean_y) ** 2
+        point_idx = int(np.argmin(distances))
         x = float(xs[point_idx]) / max(width - 1, 1)
         y = float(ys[point_idx]) / max(height - 1, 1)
         return torch.tensor([x, y], dtype=torch.float32)

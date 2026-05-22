@@ -79,6 +79,7 @@ python -m touch_from_segmentation.dino.main train \
   --epochs 20 \
   --batch-size 32 \
   --head-type mlp \
+  --mlp-layers 2 \
   --wandb \
   --wandb-project dino-touch \
   --wandb-name epic-mlp
