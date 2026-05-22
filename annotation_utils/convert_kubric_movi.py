@@ -6,7 +6,7 @@ each object-object collision into one training pair:
 
     colliding instance A -> object1_mask_path (role: colliding_object_1)
     colliding instance B -> object2_mask_path (role: colliding_object_2)
-    collision image point -> target_path touch disk
+    visible collision image point -> target_path touch disk clipped to visible object pixels
 
 It also writes frame-level "no-touch" rows sampled from frames with no valid
 object-object collision anywhere in the scene.
@@ -110,6 +110,23 @@ def _touch_disk(
     draw = ImageDraw.Draw(mask)
     draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=255)
     return mask
+
+
+def _visible_touch_mask(
+    image_position: np.ndarray,
+    height: int,
+    width: int,
+    radius: int,
+    object1_mask: np.ndarray,
+    object2_mask: np.ndarray,
+) -> np.ndarray | None:
+    """Return the visible part of a touch disk, or None if the contact is occluded."""
+    touch_mask = np.asarray(_touch_disk(image_position, height, width, radius)) > 0
+    touch_on_object1 = touch_mask & object1_mask
+    touch_on_object2 = touch_mask & object2_mask
+    if not touch_on_object1.any() or not touch_on_object2.any():
+        return None
+    return touch_mask & (object1_mask | object2_mask)
 
 
 def _mask_has_content(path: str) -> bool:
@@ -249,6 +266,7 @@ def convert(
     videos_seen = 0
     skipped_floor = 0
     skipped_empty_masks = 0
+    skipped_occluded_touches = 0
     skipped_bad_frame = 0
     no_touch_rows = 0
 
@@ -304,6 +322,18 @@ def convert(
                 skipped_empty_masks += 1
                 continue
 
+            visible_touch_mask = _visible_touch_mask(
+                event["image_position"],
+                height,
+                width,
+                touch_radius,
+                object1_mask_arr,
+                object2_mask_arr,
+            )
+            if visible_touch_mask is None:
+                skipped_occluded_touches += 1
+                continue
+
             if hard_negative_window > 0:
                 for offset in range(-hard_negative_window, hard_negative_window + 1):
                     if offset == 0:
@@ -331,7 +361,7 @@ def convert(
             _save_frame_if_needed(video, frame_idx, frame_path)
             _binary_mask(object1_mask_arr).save(object1_path)
             _binary_mask(object2_mask_arr).save(object2_path)
-            _touch_disk(event["image_position"], height, width, touch_radius).save(touch_path)
+            _binary_mask(visible_touch_mask).save(touch_path)
 
             instance_a = _instance_metadata(sample, inst_a)
             instance_b = _instance_metadata(sample, inst_b)
@@ -411,6 +441,8 @@ def convert(
         print(f"  skipped floor/background collisions: {skipped_floor}")
     if skipped_empty_masks:
         print(f"  skipped collisions with invisible foreground mask(s): {skipped_empty_masks}")
+    if skipped_occluded_touches:
+        print(f"  skipped occluded/non-visible touches: {skipped_occluded_touches}")
     if skipped_bad_frame:
         print(f"  skipped collisions with invalid frame index: {skipped_bad_frame}")
 
