@@ -31,7 +31,7 @@ def compute_bin_stats(df: pd.DataFrame, n_bins: int) -> pd.DataFrame:
     touch = touch[touch["label"] == 1]
 
     if len(touch) == 0:
-        raise ValueError("No touch-positive rows with depth_touch found in CSV.")
+        return None
 
     touch["bin"], bin_edges = pd.qcut(
         touch["depth_touch"], q=n_bins, retbins=True, duplicates="drop"
@@ -111,6 +111,15 @@ def main() -> None:
 
     output = args.output or args.csv.with_name(args.csv.stem + "_depth_perf.png")
     stats  = compute_bin_stats(df, args.n_bins)
+    if stats is None:
+        n_touch = int((df["label"] == 1).sum())
+        n_with_depth = int(df["depth_touch"].notna().sum())
+        print(
+            f"[SKIP] depth eval — no touch-positive rows have depth_touch populated.\n"
+            f"       touch-positive rows: {n_touch}  |  rows with depth_touch: {n_with_depth}\n"
+            f"       annotate_touch_depth.py may not support this dataset's depth format."
+        )
+        return
     plot_depth_bars(stats, output)
     print(f"Saved → {output}")
     print(f"\nPer-bin recall:\n{stats[['bin_label', 'n', 'recall']].to_string(index=False)}")
