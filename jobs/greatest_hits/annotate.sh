@@ -1,12 +1,12 @@
 #!/bin/bash
 
-#SBATCH --partition=gpu_a100
+#SBATCH --partition=gpu_h100
 #SBATCH --gpus=1
 #SBATCH --job-name=gh_annotate
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --time=08:00:00
+#SBATCH --time=01:00:00
 #SBATCH --array=0-3                          # 4 parallel tasks (indices 0-3)
 #SBATCH --output=slurm_output_%A_%a.out
 #SBATCH --mail-type=BEGIN,END,FAIL

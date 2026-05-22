@@ -1,12 +1,12 @@
 #!/bin/bash
 
-#SBATCH --partition=staging
+#SBATCH --partition=rome
 #SBATCH --job-name=ek_audio
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=8G
-#SBATCH --time=4:00:00
-#SBATCH --array=0-7                          # 8 parallel tasks (indices 0-7)
+#SBATCH --time=0:50:00
+#SBATCH --array=0-2                          # 8 parallel tasks (indices 0-7)
 #SBATCH --output=slurm_output_%A_%a.out
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=daniel.otero.gomez@student.uva.nl
@@ -19,7 +19,7 @@
 # To target specific videos instead of the full frames/ tree:
 #   sbatch download_audio.sh --video-ids P01_01 P01_103
 
-NUM_JOBS=8   # must match the upper bound of --array + 1
+NUM_JOBS=3   # must match the upper bound of --array + 1
 
 module purge
 module load 2025
@@ -29,8 +29,10 @@ source activate touch_from_segmentation
 
 cd "$HOME/Touch_Breaks_Feelings"
 
+EK_ROOT="/scratch-shared/$(whoami)/epic_kitchen"
+
 python scripts/epic_kitchen/download_audio.py \
-    --data-dir "./data/epic_kitchen" \
+    --data-dir "$EK_ROOT" \
     --num-jobs  "$NUM_JOBS" \
     --job-index "$SLURM_ARRAY_TASK_ID" \
     "$@"

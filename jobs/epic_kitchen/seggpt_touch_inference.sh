@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --partition=gpu_a100
+#SBATCH --partition=gpu_h100
 #SBATCH --gpus=1
 #SBATCH --job-name=ek_seggpt_touch
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --time=12:00:00
+#SBATCH --time=1:00:00
 #SBATCH --array=0-3                          # 4 parallel tasks (indices 0-3)
 #SBATCH --output=slurm_output_%A_%a.out
 #SBATCH --mail-type=BEGIN,END,FAIL

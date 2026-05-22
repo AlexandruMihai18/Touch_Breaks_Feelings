@@ -5,7 +5,7 @@
 #SBATCH --job-name=repair_depth
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --time=08:00:00
+#SBATCH --time=01:00:00
 #SBATCH --array=0-3                          # 4 parallel tasks (indices 0-3)
 #SBATCH --output=slurm_output_%A_%a.out
 #SBATCH --mail-type=BEGIN,END,FAIL
