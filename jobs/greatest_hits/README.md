@@ -49,7 +49,7 @@ sbatch jobs/greatest_hits/prepare_data.sh
 ---
 
 ### `annotate.sh`
-Runs the full per-frame annotation pipeline: Grounding-DINO → SAM → Depth-Anything-V2 → touch mask. GPU required.
+Runs the full per-frame annotation pipeline: Grounding-DINO → SAM → Depth-Anything-V2 → touch mask. GPU required. Uses a 4-task SLURM array to split the video folder list round-robin across tasks.
 
 ```bash
 sbatch jobs/greatest_hits/annotate.sh
@@ -58,12 +58,13 @@ sbatch jobs/greatest_hits/annotate.sh
 | Resource | Value |
 |---|---|
 | Partition | `gpu_mig` |
-| GPUs | 1 |
-| CPUs | 8 |
-| Memory | 32 GB |
+| GPUs | 1 per task |
+| CPUs | 8 per task |
+| Memory | 32 GB per task |
 | Time limit | 8 h |
+| Array | 4 tasks |
 
-**Notes:** Uses `--skip-existing` by default — safe to resubmit to resume an interrupted run.
+**Notes:** Uses `--skip-existing` by default — safe to resubmit to resume an interrupted run. Update `--array` and `NUM_JOBS` together to change the degree of parallelism.
 
 **Depends on:** `prepare_data.sh`
 
