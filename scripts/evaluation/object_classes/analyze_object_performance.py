@@ -22,8 +22,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import matplotlib as mpl
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -69,12 +69,11 @@ def compute_cluster_stats(df: pd.DataFrame, cluster_map: dict[str, str]) -> pd.D
 # Plot
 # ---------------------------------------------------------------------------
 
-def plot_cluster_bars(stats: pd.DataFrame, output: Path) -> None:
+def plot_cluster_bars(stats: pd.DataFrame, metric: str, output: Path) -> None:
     plot_style.apply()
 
     clusters = stats["cluster"].tolist()
     x = np.arange(len(clusters))
-    width = 0.22
 
     fig, (ax_top, ax_bot) = plt.subplots(
         2, 1,
@@ -82,28 +81,42 @@ def plot_cluster_bars(stats: pd.DataFrame, output: Path) -> None:
         gridspec_kw={"height_ratios": [1.1, 1.0]},
     )
 
-    # ── Top: recall / precision / F1 ─────────────────────────────────────────
-    ax_top.bar(x - width, stats["recall"],    width, label="Recall",    color=plot_style.C_RECALL,
-               edgecolor="white", linewidth=0.4, zorder=3, alpha=0.90)
-    ax_top.bar(x,          stats["precision"], width, label="Precision", color=plot_style.C_PREC,
-               edgecolor="white", linewidth=0.4, zorder=3, alpha=0.90)
-    ax_top.bar(x + width,  stats["f1"],        width, label="F1",        color=plot_style.C_F1,
-               edgecolor="white", linewidth=0.4, zorder=3, alpha=0.90)
+    # ── Top: selected metric, one bar per cluster, RdYlGn coloured ───────────
+    cmap = plt.cm.RdYlGn
+    norm = mpl.colors.Normalize(vmin=0, vmax=1)
+    vals = stats[metric].fillna(0).values
+    colors = [cmap(norm(v)) for v in vals]
+
+    ax_top.bar(x, vals, width=0.58, color=colors, edgecolor="white", linewidth=0.6, zorder=3)
 
     for i, (_, row) in enumerate(stats.iterrows()):
-        for offset, col in [(-width, "recall"), (0, "precision"), (width, "f1")]:
-            v = row[col]
-            if not np.isnan(v):
-                ax_top.text(i + offset, v + 0.02, f"{v:.2f}",
-                            ha="center", va="bottom", fontsize=6.5, color=plot_style.DARK)
+        v = row[metric]
+        if not np.isnan(v):
+            ax_top.text(i, v + 0.025, f"{v:.2f}",
+                        ha="center", va="bottom", fontsize=8, fontweight="semibold",
+                        color=plot_style.DARK)
+        ax_top.text(i, -0.055, f"n={row['n']}", ha="center", va="top",
+                    fontsize=7.5, color=plot_style.GRAY,
+                    transform=ax_top.get_xaxis_transform())
+
+    mean_val = np.nanmean(vals)
+    ax_top.axhline(mean_val, color=plot_style.DARK, linestyle="--", linewidth=1.0,
+                   label=f"Mean {metric} = {mean_val:.2f}", zorder=4)
+
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax_top, pad=0.01, fraction=0.025, aspect=25)
+    cbar.set_label(metric.capitalize(), fontsize=9)
+    cbar.ax.tick_params(labelsize=8)
+    cbar.outline.set_linewidth(0.5)
 
     ax_top.set_xticks(x)
     ax_top.set_xticklabels(clusters, rotation=30, ha="right", fontsize=9)
-    ax_top.set_ylim(0, 1.25)
-    ax_top.set_ylabel("Score")
-    ax_top.set_title("Performance metrics by object cluster")
-    ax_top.legend(loc="upper right", ncol=3)
-    ax_top.set_xlim(-0.6, len(clusters) - 0.4)
+    ax_top.set_ylim(0, 1.18)
+    ax_top.set_ylabel(metric.capitalize())
+    ax_top.set_title(f"Touch-detection {metric} by object cluster")
+    ax_top.legend(loc="upper left", fontsize=9)
+    ax_top.set_xlim(-0.55, len(clusters) - 0.45)
 
     # ── Bottom: TP / TN / FP / FN proportional stacked bars ──────────────────
     totals = stats[["tp", "tn", "fp", "fn"]].sum(axis=1).values
@@ -147,6 +160,8 @@ def main() -> None:
                         help="Cluster mapping JSON produced by cluster_object_classes.py")
     parser.add_argument("--annotations", nargs="+", type=Path, default=None,
                         help="Annotation JSON file(s) to join object_name into the CSV")
+    parser.add_argument("--metric", choices=["recall", "precision", "f1", "accuracy"],
+                        default="f1", help="Metric shown in the bar chart (default: f1)")
     parser.add_argument("--output",   type=Path, default=None,
                         help="Output PNG path (default: <csv_stem>_object_perf.png)")
     args = parser.parse_args()
@@ -173,7 +188,7 @@ def main() -> None:
         return
 
     output = args.output or args.csv.with_name(args.csv.stem + "_object_perf.png")
-    plot_cluster_bars(stats, output)
+    plot_cluster_bars(stats, args.metric, output)
     print(f"Saved → {output}")
 
     cols = ["cluster", "n", "tp", "tn", "fp", "fn", "recall", "precision", "f1", "accuracy"]

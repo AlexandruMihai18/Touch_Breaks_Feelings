@@ -92,11 +92,17 @@ def main() -> None:
     parser.add_argument("--grid", type=int, default=8,
                         help="Grid dimension for the touch-zone heatmap (default: 8)")
     parser.add_argument("--depth-metric", choices=["recall", "accuracy"], default="recall",
-                        help="Metric label for the depth bar chart (default: recall)")
+                        help="Metric label for the depth bar chart — recall/accuracy only "
+                             "because depth_touch exists only for touch-positive samples (default: recall)")
     parser.add_argument("--zones-metric", choices=["recall", "accuracy"], default="recall",
-                        help="Metric label for the touch-zone heatmap (default: recall)")
-    parser.add_argument("--coverage-metric", choices=["f1", "accuracy"], default="f1",
+                        help="Metric label for the touch-zone heatmap — recall/accuracy only "
+                             "because x/y_touch exists only for touch-positive samples (default: recall)")
+    parser.add_argument("--coverage-metric",
+                        choices=["recall", "precision", "f1", "accuracy"], default="f1",
                         help="Metric shown in the coverage bar chart (default: f1)")
+    parser.add_argument("--object-metric",
+                        choices=["recall", "precision", "f1", "accuracy"], default="f1",
+                        help="Metric shown in the object-cluster bar chart (default: f1)")
 
     # Step selection
     parser.add_argument("--skip", nargs="*",
@@ -152,6 +158,7 @@ def main() -> None:
                 [py, str(_SCRIPTS["object"]),
                  str(args.csv),
                  "--clusters", str(args.clusters),
+                 "--metric",   args.object_metric,
                  "--output",   str(out),
                  *ann_args],
                 "object",
@@ -167,7 +174,7 @@ def main() -> None:
             [py, str(_SCRIPTS["coverage"]),
              str(args.csv),
              "--n-bins", str(args.n_bins),
-             "--metric",  args.metric,
+             "--metric",  args.coverage_metric,
              "--output",  str(out),
              *ann_args],
             "coverage",

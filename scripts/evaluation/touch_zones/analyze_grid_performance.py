@@ -145,8 +145,10 @@ def main() -> None:
     parser.add_argument("csv", type=Path,
                         help="CSV with frame_id,video_id,...,label,prediction,x_touch,y_touch")
     parser.add_argument("--metric", choices=["recall", "accuracy"], default="recall",
-                        help="Per-zone metric to display (default: recall). "
-                             "Both are equivalent for touch-only samples; choose the label you prefer.")
+                        help="Metric label for the heatmap (default: recall). "
+                             "x_touch/y_touch are only annotated for touch-positive samples, so "
+                             "precision and F1 are not computable per zone — recall and accuracy "
+                             "are equivalent here.")
     parser.add_argument("--grid", type=int, default=8, metavar="N",
                         help="Grid dimension — must match what was used in annotate_touch_zones.py (default: 8)")
     parser.add_argument("--output", type=Path, default=None,
