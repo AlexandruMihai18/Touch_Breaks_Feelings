@@ -1,13 +1,20 @@
 """Analyze model touch-detection performance across depth bins.
 
-Reads a prediction CSV that must include a `depth_touch` column (median grayscale
-depth under the touch mask, populated by annotate_touch_depth.py).  Bins the depth
-values and computes per-bin recall (hit rate on touch-positive samples).
+Reads a prediction CSV with a `depth_touch` column (median grayscale disparity
+under the touch mask, populated by annotate_touch_depth.py) and reports recall
+for three fixed distance categories.
+
+Disparity scale (Depth-Anything-V2 grayscale, 0–255):
+    0–84   → Far     (low disparity = objects far away)
+    85–169 → Medium
+    170–255 → Close   (high disparity = objects close to camera)
 
 Usage
 -----
-    python scripts/analyze_depth_performance.py results/predictions.csv \\
-        [--n-bins 5] [--output depth_performance.png]
+    python scripts/evaluation/depth/analyze_depth_performance.py \\
+        results/predictions.csv \\
+        --annotations /path/to/annotations.json \\
+        [--output depth_performance.png]
 """
 
 from __future__ import annotations
@@ -27,44 +34,45 @@ from utils import enrich_df
 import plot_style
 
 
-def compute_bin_stats(df: pd.DataFrame, n_bins: int) -> pd.DataFrame:
-    """Bin depth values by quantile and compute per-bin recall on touch samples."""
+# Hard disparity thresholds — low = far, high = near (0–255 grayscale)
+_BINS = [
+    ("Far",    0,   85),
+    ("Medium", 85,  170),
+    ("Close",  170, 256),
+]
+
+# Sample from inferno to stay consistent with how depth maps are visualised
+_BIN_COLORS = [plt.cm.inferno(v) for v in (0.15, 0.50, 0.82)]
+
+
+def compute_bin_stats(df: pd.DataFrame) -> pd.DataFrame | None:
     touch = df.dropna(subset=["depth_touch"]).copy()
     touch = touch[touch["label"] == 1]
-
     if len(touch) == 0:
         return None
 
-    touch["bin"], bin_edges = pd.qcut(
-        touch["depth_touch"], q=n_bins, retbins=True, duplicates="drop"
-    )
-
     rows = []
-    for interval, group in touch.groupby("bin", observed=True):
-        n    = len(group)
-        hits = (group["prediction"] == 1).sum()
+    for label, lo, hi in _BINS:
+        group = touch[(touch["depth_touch"] >= lo) & (touch["depth_touch"] < hi)]
+        n = len(group)
+        if n == 0:
+            continue
         rows.append({
-            "bin_label": f"{interval.left:.0f}–{interval.right:.0f}",
-            "depth_mid": (interval.left + interval.right) / 2,
+            "bin_label": label,
             "n":         n,
-            "recall":    hits / n,
+            "recall":    (group["prediction"] == 1).sum() / n,
         })
 
-    if not rows:
-        return None
-
-    return pd.DataFrame(rows).sort_values("depth_mid")
+    return pd.DataFrame(rows) if rows else None
 
 
 def plot_depth_bars(stats: pd.DataFrame, metric_label: str, output_path: Path) -> None:
     plot_style.apply()
 
     n = len(stats)
-    fig, ax = plt.subplots(figsize=(max(5.5, n * 1.1), 4.0))
+    colors = _BIN_COLORS[:n]
 
-    cmap = plt.cm.RdYlGn
-    norm = mpl.colors.Normalize(vmin=0, vmax=1)
-    colors = [cmap(norm(v)) for v in stats["recall"]]
+    fig, ax = plt.subplots(figsize=(3.5 + n * 0.8, 4.0))
 
     ax.bar(
         range(n),
@@ -72,60 +80,41 @@ def plot_depth_bars(stats: pd.DataFrame, metric_label: str, output_path: Path) -
         color=colors,
         edgecolor="white",
         linewidth=0.6,
-        width=0.58,
+        width=0.52,
         zorder=3,
     )
 
-    # Value label above bar; count inside bar near the bottom
     for i, (_, row) in enumerate(stats.iterrows()):
         ax.text(
             i, row["recall"] + 0.025,
             f"{row['recall']:.2f}",
-            ha="center", va="bottom", fontsize=9, fontweight="semibold",
+            ha="center", va="bottom", fontsize=11, fontweight="semibold",
             color=plot_style.DARK,
-        )
-        ax.text(
-            i, 0.03,
-            f"({row['n']})",
-            ha="center", va="bottom", fontsize=7.5, color="white",
-            fontweight="semibold", zorder=5,
         )
 
     mean_val = stats["recall"].mean()
     ax.axhline(
-        mean_val, color=plot_style.DARK, linestyle="--", linewidth=1.0,
-        label=f"Mean {metric_label.lower()} = {mean_val:.2f}", zorder=4,
+        mean_val, color=plot_style.GRAY, linestyle="--", linewidth=1.0,
+        label=f"Mean = {mean_val:.2f}", zorder=4,
     )
-
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([])
-    cbar = fig.colorbar(sm, ax=ax, pad=0.01, fraction=0.03, aspect=25)
-    cbar.set_label(metric_label, fontsize=9)
-    cbar.ax.tick_params(labelsize=8)
-    cbar.outline.set_linewidth(0.5)
 
     ax.set_xticks(range(n))
-    ax.set_xticklabels(stats["bin_label"], rotation=30, ha="right", fontsize=9)
-    ax.set_xlabel(
-        "Depth bin  (disparity value — low = far,  high = near)",
-        labelpad=8,
-    )
+    ax.set_xticklabels(stats["bin_label"], fontsize=12)
     ax.set_ylabel(metric_label)
-    ax.set_ylim(0, 1.18)
+    ax.set_ylim(0, 1.15)
     ax.set_xlim(-0.55, n - 0.45)
-    ax.set_title(f"Touch-detection {metric_label.lower()} by depth bin\n(touch-positive samples only)")
+    ax.set_title("Recall by object distance")
     ax.legend(loc="upper left", fontsize=9)
+    ax.set_xlabel("")
 
     plt.savefig(output_path)
     plt.close(fig)
 
 
 def main() -> None:
+    _METRICS = ["recall", "accuracy"]
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("csv", type=Path)
-    parser.add_argument("--n-bins", type=int, default=5,
-                        help="Number of quantile depth bins (default: 5)")
-    _METRICS = ["recall", "accuracy"]
     parser.add_argument("--metric", choices=_METRICS, default="recall",
                         help="Metric label for the figure (default: recall). "
                              "depth_touch is only annotated for touch-positive samples, so precision "
@@ -135,7 +124,7 @@ def main() -> None:
                              "Overrides --metric.")
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument("--annotations", nargs="+", type=Path, required=True,
-                        help="Annotation JSON file(s) providing depth_touch (required; not in prediction CSV)")
+                        help="Annotation JSON file(s) providing depth_touch")
     args = parser.parse_args()
 
     if not args.csv.exists():
@@ -149,14 +138,13 @@ def main() -> None:
         raise ValueError(f"CSV missing columns: {missing}")
 
     base_output = args.output or args.csv.with_name(args.csv.stem + "_depth_perf.png")
-    stats = compute_bin_stats(df, args.n_bins)
+    stats = compute_bin_stats(df)
     if stats is None:
         n_touch = int((df["label"] == 1).sum())
         n_with_depth = int(df["depth_touch"].notna().sum())
         print(
             f"[SKIP] depth eval — no touch-positive rows have depth_touch populated.\n"
-            f"       touch-positive rows: {n_touch}  |  rows with depth_touch: {n_with_depth}\n"
-            f"       annotate_touch_depth.py may not support this dataset's depth format."
+            f"       touch-positive rows: {n_touch}  |  rows with depth_touch: {n_with_depth}"
         )
         return
 
@@ -172,7 +160,8 @@ def main() -> None:
     touch = df.dropna(subset=["depth_touch"])
     if len(touch) > 0:
         gs = global_stats(touch)
-        print(f"\nGlobal (depth-annotated samples only, n={gs['total']}): "
+        print(f"\nGlobal (depth-annotated samples, n={gs['total']}): "
+
               f"accuracy={gs['accuracy']:.3f}  F1={gs['f1']:.3f}")
 
 
