@@ -38,7 +38,14 @@ def _touch_mask_path(entry: dict) -> str | None:
 
 
 def median_depth_under_mask(depth_path: Path, mask_path: str) -> float | None:
-    depth = np.array(Image.open(depth_path).convert("L"), dtype=np.float32)
+    img = Image.open(depth_path)
+    # Depth PNGs are saved as uint16 (values 0-65535). Pillow loads them in
+    # mode "I" (32-bit int), and .convert("L") clamps to [0,255] instead of
+    # rescaling — every value above ~1 becomes 255. Detect uint16 and rescale.
+    if img.mode in ("I", "I;16", "I;16B"):
+        depth = np.array(img, dtype=np.float32) * (255.0 / 65535.0)
+    else:
+        depth = np.array(img.convert("L"), dtype=np.float32)
     mask  = np.array(Image.open(mask_path).convert("L")) > 127
     if mask.sum() == 0:
         return None
