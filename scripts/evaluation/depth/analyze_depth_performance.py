@@ -125,10 +125,14 @@ def main() -> None:
     parser.add_argument("csv", type=Path)
     parser.add_argument("--n-bins", type=int, default=5,
                         help="Number of quantile depth bins (default: 5)")
-    parser.add_argument("--metric", choices=["recall", "accuracy"], default="recall",
+    _METRICS = ["recall", "accuracy"]
+    parser.add_argument("--metric", choices=_METRICS, default="recall",
                         help="Metric label for the figure (default: recall). "
                              "depth_touch is only annotated for touch-positive samples, so precision "
                              "and F1 are not computable per bin — recall and accuracy are equivalent here.")
+    parser.add_argument("--all-metrics", action="store_true",
+                        help=f"Generate one figure per metric {_METRICS}, each suffixed with the metric name. "
+                             "Overrides --metric.")
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument("--annotations", nargs="+", type=Path, required=True,
                         help="Annotation JSON file(s) providing depth_touch (required; not in prediction CSV)")
@@ -144,9 +148,8 @@ def main() -> None:
     if missing := required - set(df.columns):
         raise ValueError(f"CSV missing columns: {missing}")
 
-    metric_label = "Recall (hit rate)" if args.metric == "recall" else "Accuracy"
-    output = args.output or args.csv.with_name(args.csv.stem + "_depth_perf.png")
-    stats  = compute_bin_stats(df, args.n_bins)
+    base_output = args.output or args.csv.with_name(args.csv.stem + "_depth_perf.png")
+    stats = compute_bin_stats(df, args.n_bins)
     if stats is None:
         n_touch = int((df["label"] == 1).sum())
         n_with_depth = int(df["depth_touch"].notna().sum())
@@ -156,9 +159,15 @@ def main() -> None:
             f"       annotate_touch_depth.py may not support this dataset's depth format."
         )
         return
-    plot_depth_bars(stats, metric_label, output)
-    print(f"Saved → {output}")
-    print(f"\nPer-bin {args.metric}:\n{stats[['bin_label', 'n', 'recall']].to_string(index=False)}")
+
+    metrics = _METRICS if args.all_metrics else [args.metric]
+    for metric in metrics:
+        metric_label = "Recall (hit rate)" if metric == "recall" else "Accuracy"
+        out = plot_style.with_metric_suffix(base_output, metric) if args.all_metrics else base_output
+        plot_depth_bars(stats, metric_label, out)
+        print(f"Saved → {out}")
+
+    print(f"\nPer-bin stats:\n{stats[['bin_label', 'n', 'recall']].to_string(index=False)}")
 
     touch = df.dropna(subset=["depth_touch"])
     if len(touch) > 0:

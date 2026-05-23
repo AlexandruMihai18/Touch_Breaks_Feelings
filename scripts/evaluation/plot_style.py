@@ -96,3 +96,14 @@ def recall_colors(values: list[float], vmin: float = 0.0, vmax: float = 1.0) -> 
     cmap = plt.cm.RdYlGn
     norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
     return [cmap(norm(v)) for v in values]
+
+
+def with_metric_suffix(path, metric: str):
+    """Return path with _<metric> inserted before the extension.
+
+    Example: with_metric_suffix(Path("results/depth_perf.png"), "f1")
+             → Path("results/depth_perf_f1.png")
+    """
+    from pathlib import Path as _Path
+    p = _Path(path)
+    return p.parent / f"{p.stem}_{metric}{p.suffix}"

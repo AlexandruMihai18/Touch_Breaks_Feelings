@@ -160,8 +160,12 @@ def main() -> None:
                         help="Cluster mapping JSON produced by cluster_object_classes.py")
     parser.add_argument("--annotations", nargs="+", type=Path, default=None,
                         help="Annotation JSON file(s) to join object_name into the CSV")
-    parser.add_argument("--metric", choices=["recall", "precision", "f1", "accuracy"],
-                        default="f1", help="Metric shown in the bar chart (default: f1)")
+    _METRICS = ["recall", "precision", "f1", "accuracy"]
+    parser.add_argument("--metric", choices=_METRICS, default="f1",
+                        help="Metric shown in the bar chart (default: f1)")
+    parser.add_argument("--all-metrics", action="store_true",
+                        help=f"Generate one figure per metric {_METRICS}, each suffixed with the metric name. "
+                             "Overrides --metric.")
     parser.add_argument("--output",   type=Path, default=None,
                         help="Output PNG path (default: <csv_stem>_object_perf.png)")
     args = parser.parse_args()
@@ -187,9 +191,12 @@ def main() -> None:
         print("[SKIP] object eval — no rows with object_name after enrichment.")
         return
 
-    output = args.output or args.csv.with_name(args.csv.stem + "_object_perf.png")
-    plot_cluster_bars(stats, args.metric, output)
-    print(f"Saved → {output}")
+    base_output = args.output or args.csv.with_name(args.csv.stem + "_object_perf.png")
+    metrics = _METRICS if args.all_metrics else [args.metric]
+    for metric in metrics:
+        out = plot_style.with_metric_suffix(base_output, metric) if args.all_metrics else base_output
+        plot_cluster_bars(stats, metric, out)
+        print(f"Saved → {out}")
 
     cols = ["cluster", "n", "tp", "tn", "fp", "fn", "recall", "precision", "f1", "accuracy"]
     print(f"\nPer-cluster results (n={len(df)}):\n")
