@@ -2,20 +2,27 @@
 Verify that every ±4 context frame for EPIC Kitchen VAL touch anchors exists
 on disk, and download any that are missing from the VISOR frame ZIPs.
 
-After ensuring all frames are present, regenerates val_context_frames.json
-(equivalent to re-running generate_context_frames.py --overwrite).
+VISOR val annotations are sampled from EK100 train videos, so their frame
+ZIPs live under rgb_frames/train/ rather than rgb_frames/val/.  The script
+probes "train" first and falls back to "val" for each video.
 
-Frame ZIPs are fetched via HTTP range requests from:
-    {FRAME_BASE}/val/{participant}/{video_id}.zip
+Parallelism
+-----------
+Pass --task-id and --n-tasks to run as one slice of a SLURM array job.
+Each task owns every Nth video (round-robin by sorted video_id).  JSON
+regeneration is skipped in array mode — run generate_context_frames.py
+separately after all tasks complete (the submit script handles this).
 
-Usage
------
+Single-process usage
+--------------------
     python scripts/epic_kitchen/ensure_context_frames.py
 
+Array-task usage (called by SLURM, not directly)
+--------------------
     python scripts/epic_kitchen/ensure_context_frames.py \\
         --annotations-dir /scratch-shared/$USER/epic_kitchen/annotations \\
         --frames-dir      /scratch-shared/$USER/epic_kitchen/frames \\
-        --workers         4
+        --task-id 0 --n-tasks 8
 """
 
 from __future__ import annotations
@@ -24,6 +31,7 @@ import argparse
 import json
 import re
 import sys
+import urllib.request
 from collections import defaultdict
 from pathlib import Path
 
@@ -39,9 +47,38 @@ from scripts.epic_kitchen.download_epic_kitchen.phase3_frames import (
 _EK_FPS = 50
 _STEPS = [-4, -3, -2, -1, 1, 2, 3, 4]
 _DEFAULT_STEP_S = 0.5
-_SPLIT = "val"
 
 _FRAME_NUM_RE = re.compile(r"_frame_(\d+)\.")
+
+_zip_url_cache: dict[str, str] = {}
+
+
+def _resolve_zip_url(video_id: str) -> str:
+    """Return the first reachable VISOR frame ZIP URL for *video_id*.
+
+    VISOR val annotations are taken from EK100 train videos, so their ZIPs
+    live under rgb_frames/train/ rather than rgb_frames/val/.  We try "train"
+    first and fall back to "val" so the script works regardless of how the
+    server organises the data.
+    """
+    if video_id in _zip_url_cache:
+        return _zip_url_cache[video_id]
+
+    pid = video_id.split("_")[0]
+    for split in ("train", "val"):
+        url = f"{FRAME_BASE}/{split}/{pid}/{video_id}.zip"
+        try:
+            req = urllib.request.Request(url, method="HEAD")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                if resp.status == 200:
+                    _zip_url_cache[video_id] = url
+                    return url
+        except Exception:
+            continue
+
+    fallback = f"{FRAME_BASE}/train/{pid}/{video_id}.zip"
+    _zip_url_cache[video_id] = fallback
+    return fallback
 
 
 def parse_args() -> argparse.Namespace:
@@ -55,10 +92,14 @@ def parse_args() -> argparse.Namespace:
                    help="Root directory with per-video frame subfolders.")
     p.add_argument("--step-seconds", type=float, default=_DEFAULT_STEP_S,
                    help="Temporal gap between context steps in seconds.")
-    p.add_argument("--workers", type=int, default=4,
-                   help="Parallel threads for ZIP extraction.")
     p.add_argument("--failure-log", type=Path, default=None,
-                   help="Path to failure log JSON (default: annotations-dir/ctx_failures.json).")
+                   help="Failure log path. Defaults to ctx_failures.json or "
+                        "ctx_failures_{task_id}.json in array mode.")
+    p.add_argument("--task-id", type=int, default=None,
+                   help="0-based index of this array task. When set, only this "
+                        "task's slice of videos is processed and JSON regen is skipped.")
+    p.add_argument("--n-tasks", type=int, default=1,
+                   help="Total number of array tasks (used with --task-id).")
     return p.parse_args()
 
 
@@ -69,10 +110,6 @@ def _frame_idx_from_path(image_path: str) -> int | None:
 
 def _frame_name(video_id: str, frame_idx: int) -> str:
     return f"{video_id}_frame_{frame_idx:010d}.jpg"
-
-
-def _participant(video_id: str) -> str:
-    return video_id.split("_")[0]
 
 
 def _compute_needed(
@@ -144,7 +181,13 @@ def _build_context_entries(
 
 def main() -> None:
     args = parse_args()
-    flog_path = args.failure_log or args.annotations_dir / "ctx_failures.json"
+
+    array_mode = args.task_id is not None
+    if array_mode:
+        flog_name = f"ctx_failures_{args.task_id}.json"
+    else:
+        flog_name = "ctx_failures.json"
+    flog_path = args.failure_log or args.annotations_dir / flog_name
     flog = FailureLog(flog_path)
 
     val_json = args.annotations_dir / "val.json"
@@ -153,9 +196,10 @@ def main() -> None:
         sys.exit(1)
 
     step_frames = round(args.step_seconds * _EK_FPS)
+    task_label = f"task {args.task_id}/{args.n_tasks}" if array_mode else "single"
 
     print("=" * 60)
-    print("  EPIC Kitchen — ensure VAL context frames")
+    print(f"  EPIC Kitchen — ensure VAL context frames  [{task_label}]")
     print(f"  annotations : {val_json}")
     print(f"  frames dir  : {args.frames_dir}")
     print(f"  step size   : {args.step_seconds} s  (= {step_frames} frames @ {_EK_FPS} fps)")
@@ -166,14 +210,21 @@ def main() -> None:
     entries: list[dict] = json.loads(val_json.read_text())
     needed = _compute_needed(entries, step_frames)
 
-    total_needed = sum(len(v) for v in needed.values())
-    print(f"\nContext frames needed: {total_needed} across {len(needed)} videos")
+    # In array mode each task owns every Nth video (round-robin by sorted video_id).
+    all_videos = sorted(needed.keys())
+    if array_mode:
+        my_videos = [v for i, v in enumerate(all_videos) if i % args.n_tasks == args.task_id]
+        print(f"\nThis task: {len(my_videos)} / {len(all_videos)} videos")
+    else:
+        my_videos = all_videos
+        print(f"\nContext frames needed across {len(my_videos)} videos")
 
     # ── Check which are missing ──────────────────────────────────────────────
     missing_by_video: dict[str, set[str]] = {}
     total_ok = total_missing = 0
 
-    for video_id, ctx_idxs in sorted(needed.items()):
+    for video_id in my_videos:
+        ctx_idxs = needed[video_id]
         vid_dir = args.frames_dir / video_id
         missing: set[str] = set()
         for idx in ctx_idxs:
@@ -194,8 +245,7 @@ def main() -> None:
         print(f"\nDownloading {total_missing} missing frame(s) from VISOR ZIPs …\n")
         dl_ok = dl_fail = 0
         for video_id, missing_names in sorted(missing_by_video.items()):
-            pid = _participant(video_id)
-            zip_url = f"{FRAME_BASE}/{_SPLIT}/{pid}/{video_id}.zip"
+            zip_url = _resolve_zip_url(video_id)
             dest_dir = args.frames_dir / video_id
             print(f"  {video_id}: {len(missing_names)} missing → {zip_url}")
             ok, fail = _extract_from_zip(zip_url, missing_names, dest_dir, video_id, flog)
@@ -207,12 +257,15 @@ def main() -> None:
             print(f"  ⚠ {dl_fail} frame(s) could not be retrieved — see {flog_path}")
         flog.flush()
 
-    # ── Regenerate val_context_frames.json ───────────────────────────────────
-    print("\nRegenerating val_context_frames.json …")
-    context_entries = _build_context_entries(entries, args.frames_dir, step_frames, args.step_seconds)
-    out_path = args.annotations_dir / "val_context_frames.json"
-    out_path.write_text(json.dumps(context_entries, indent=2))
-    print(f"  val_context_frames.json → {len(context_entries):,} entries")
+    # ── Regenerate val_context_frames.json (single-process mode only) ────────
+    if not array_mode:
+        print("\nRegenerating val_context_frames.json …")
+        context_entries = _build_context_entries(
+            entries, args.frames_dir, step_frames, args.step_seconds
+        )
+        out_path = args.annotations_dir / "val_context_frames.json"
+        out_path.write_text(json.dumps(context_entries, indent=2))
+        print(f"  val_context_frames.json → {len(context_entries):,} entries")
 
     print("\nDone.")
 
