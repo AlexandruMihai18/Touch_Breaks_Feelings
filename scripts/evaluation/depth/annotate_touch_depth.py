@@ -29,12 +29,6 @@ import numpy as np
 from PIL import Image
 
 
-def _depth_path(image_path: str) -> Path | None:
-    p = Path(image_path)
-    candidate = p.parent / (p.stem + "_depth.png")
-    return candidate if candidate.exists() else None
-
-
 def _touch_mask_path(entry: dict) -> str | None:
     for key in ("touch_mask_path", "target_path"):
         val = entry.get(key)
@@ -67,7 +61,7 @@ def annotate_file(path: Path, force: bool, dry_run: bool) -> dict:
             counts["skipped"] += 1
             continue
 
-        dp = _depth_path(entry.get("image_path", ""))
+        dp = entry.get("depth_path", None)
         if dp is None:
             entry["depth_touch"] = None
             counts["no_depth"] += 1
