@@ -95,9 +95,9 @@ def plot_cluster_bars(stats: pd.DataFrame, metric: str, output: Path) -> None:
             ax_top.text(i, v + 0.025, f"{v:.2f}",
                         ha="center", va="bottom", fontsize=8, fontweight="semibold",
                         color=plot_style.DARK)
-        ax_top.text(i, -0.055, f"n={row['n']}", ha="center", va="top",
-                    fontsize=7.5, color=plot_style.GRAY,
-                    transform=ax_top.get_xaxis_transform())
+        ax_top.text(i, 0.03, f"({row['n']})",
+                    ha="center", va="bottom", fontsize=7.5, color="white",
+                    fontweight="semibold", zorder=5)
 
     mean_val = np.nanmean(vals)
     ax_top.axhline(mean_val, color=plot_style.DARK, linestyle="--", linewidth=1.0,

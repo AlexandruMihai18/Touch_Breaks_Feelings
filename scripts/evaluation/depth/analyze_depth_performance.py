@@ -76,7 +76,7 @@ def plot_depth_bars(stats: pd.DataFrame, metric_label: str, output_path: Path) -
         zorder=3,
     )
 
-    # Value + count labels above each bar
+    # Value label above bar; count inside bar near the bottom
     for i, (_, row) in enumerate(stats.iterrows()):
         ax.text(
             i, row["recall"] + 0.025,
@@ -85,10 +85,10 @@ def plot_depth_bars(stats: pd.DataFrame, metric_label: str, output_path: Path) -
             color=plot_style.DARK,
         )
         ax.text(
-            i, -0.055,
-            f"n={row['n']}",
-            ha="center", va="top", fontsize=7.5, color=plot_style.GRAY,
-            transform=ax.get_xaxis_transform(),
+            i, 0.03,
+            f"({row['n']})",
+            ha="center", va="bottom", fontsize=7.5, color="white",
+            fontweight="semibold", zorder=5,
         )
 
     mean_val = stats["recall"].mean()

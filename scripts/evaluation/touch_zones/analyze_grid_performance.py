@@ -125,9 +125,11 @@ def plot_heatmap(
     ax.set_yticks(range(grid))
     ax.set_xticklabels([str(i) for i in range(grid)], fontsize=8)
     ax.set_yticklabels([str(i) for i in range(grid)], fontsize=8)
+    ax.xaxis.set_ticks_position("top")
+    ax.xaxis.set_label_position("top")
     ax.set_xlabel("x zone  (left → right)", labelpad=6)
-    ax.set_ylabel("y zone  (top → bottom)", labelpad=6)
-    ax.set_title(f"Per-zone {metric_label}\n(touch-positive samples only)")
+    ax.set_ylabel("y zone  (bottom → top)", labelpad=6)
+    ax.set_title(f"Per-zone {metric_label}\n(touch-positive samples only)", pad=14)
 
     # Turn off the y-axis grid that rcParams enables (grid on imshow looks bad)
     ax.grid(False)

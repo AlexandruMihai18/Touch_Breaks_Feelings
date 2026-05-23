@@ -89,10 +89,10 @@ def plot_bars(stats: pd.DataFrame, metric: str, output: Path) -> None:
             color=plot_style.DARK,
         )
         ax.text(
-            i, -0.055,
-            f"n={row['n']}  ({row['n_touch']} touch)",
-            ha="center", va="top", fontsize=7.0, color=plot_style.GRAY,
-            transform=ax.get_xaxis_transform(),
+            i, 0.03,
+            f"({row['n_touch']}/{row['n']})",
+            ha="center", va="bottom", fontsize=7.5, color="white",
+            fontweight="semibold", zorder=5,
         )
 
     mean_val = stats[metric].mean()
