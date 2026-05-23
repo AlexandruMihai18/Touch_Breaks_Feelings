@@ -23,7 +23,7 @@ import argparse
 import json
 from pathlib import Path
 
-FIELDS = ["depth_touch", "x_touch", "y_touch", "object_coverage"]
+FIELDS = ["depth_touch", "x_touch", "y_touch", "object_coverage", "general_class", "gh_class"]
 
 DATASET_SUBDIRS = {
     "gh": Path("greatest_hits/annotations"),
