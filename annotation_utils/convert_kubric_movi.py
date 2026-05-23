@@ -2,7 +2,8 @@
 Convert a local Kubric MOVi TFDS split into the touch_from_segmentation layout.
 
 MOVi-A contains rigid-body object collisions, not hands.  This converter maps
-each object-object collision into one training pair:
+each unambiguous frame with one visible object-object collision pair into one
+training pair:
 
     colliding instance A -> object1_mask_path (role: colliding_object_1)
     colliding instance B -> object2_mask_path (role: colliding_object_2)
@@ -16,9 +17,9 @@ Output layout:
     data/kubric_movi_a/
         frames/{video_id}/frame_000012.jpg
         masks/{video_id}/frame_000012_depth.png
-        masks/{video_id}/frame_000012_p0_object1.png
-        masks/{video_id}/frame_000012_p0_object2.png
-        masks/{video_id}/frame_000012_p0_touch.png
+        masks/{video_id}/frame_000012_object1.png
+        masks/{video_id}/frame_000012_object2.png
+        masks/{video_id}/frame_000012_touch.png
         annotations/val.json
         annotations/val_ctx_index.json
 
@@ -304,6 +305,8 @@ def convert(
     skipped_empty_masks = 0
     skipped_occluded_touches = 0
     skipped_bad_frame = 0
+    skipped_multi_pair_frames = 0
+    collapsed_duplicate_contact_events = 0
     depth_frames_written: set[Path] = set()
     videos_without_depth = 0
     no_touch_rows = 0
@@ -331,7 +334,6 @@ def convert(
         video_frames_dir.mkdir(parents=True, exist_ok=True)
         video_masks_dir.mkdir(parents=True, exist_ok=True)
 
-        pair_counts_by_frame: dict[int, int] = defaultdict(int)
         collision_events: list[tuple[dict[str, Any], int, int, int]] = []
         collision_frames: set[int] = set()
 
@@ -355,6 +357,7 @@ def convert(
                 if frame_idx not in collision_frames:
                     _record_no_touch_candidate(no_touch_candidates, frame_idx, "uniform")
 
+        candidates_by_frame: dict[int, list[dict[str, Any]]] = defaultdict(list)
         for event, frame_idx, inst_a, inst_b in collision_events:
             # Kubric segmentation IDs are one greater than instance indices.
             object1_mask_arr = segmentations[frame_idx] == (inst_a + 1)
@@ -375,7 +378,22 @@ def convert(
                 skipped_occluded_touches += 1
                 continue
 
-            if hard_negative_window > 0:
+            candidates_by_frame[frame_idx].append(
+                {
+                    "event": event,
+                    "frame_idx": frame_idx,
+                    "inst_a": inst_a,
+                    "inst_b": inst_b,
+                    "pair_key": tuple(sorted((inst_a, inst_b))),
+                    "force": float(np.asarray(event["force"]).item()),
+                    "object1_mask_arr": object1_mask_arr,
+                    "object2_mask_arr": object2_mask_arr,
+                    "visible_touch_mask": visible_touch_mask,
+                }
+            )
+
+        if hard_negative_window > 0:
+            for frame_idx in candidates_by_frame:
                 for offset in range(-hard_negative_window, hard_negative_window + 1):
                     if offset == 0:
                         continue
@@ -389,16 +407,27 @@ def convert(
                             offset=offset,
                         )
 
-            pair_idx = pair_counts_by_frame[frame_idx]
-            pair_counts_by_frame[frame_idx] += 1
+        for frame_idx, candidates in sorted(candidates_by_frame.items()):
+            pair_keys = {candidate["pair_key"] for candidate in candidates}
+            if len(pair_keys) > 1:
+                skipped_multi_pair_frames += 1
+                continue
+
+            collapsed_duplicate_contact_events += len(candidates) - 1
+            selected = max(candidates, key=lambda candidate: candidate["force"])
+            event = selected["event"]
+            inst_a = selected["inst_a"]
+            inst_b = selected["inst_b"]
+            object1_mask_arr = selected["object1_mask_arr"]
+            object2_mask_arr = selected["object2_mask_arr"]
+            visible_touch_mask = selected["visible_touch_mask"]
 
             frame_stem = f"frame_{frame_idx:06d}"
-            pair_stem = f"{frame_stem}_p{pair_idx}"
             frame_path = _frame_path(video_frames_dir, frame_idx)
             depth_path = _depth_path(video_masks_dir, frame_idx)
-            object1_path = video_masks_dir / f"{pair_stem}_object1.png"
-            object2_path = video_masks_dir / f"{pair_stem}_object2.png"
-            touch_path = video_masks_dir / f"{pair_stem}_touch.png"
+            object1_path = video_masks_dir / f"{frame_stem}_object1.png"
+            object2_path = video_masks_dir / f"{frame_stem}_object2.png"
+            touch_path = video_masks_dir / f"{frame_stem}_touch.png"
 
             _save_frame_if_needed(video, frame_idx, frame_path)
             depth_path_str = _save_depth_if_needed(depths, frame_idx, depth_path)
@@ -434,7 +463,8 @@ def convert(
                         "instances": [inst_a, inst_b],
                         "instance_a": instance_a,
                         "instance_b": instance_b,
-                        "force": float(np.asarray(event["force"]).item()),
+                        "force": selected["force"],
+                        "raw_contact_events_in_frame": len(candidates),
                         "position": np.asarray(event["position"]).astype(float).tolist(),
                         "image_position": np.asarray(event["image_position"]).astype(float).tolist(),
                         "contact_normal": np.asarray(event["contact_normal"]).astype(float).tolist(),
@@ -497,6 +527,10 @@ def convert(
         print(f"  skipped collisions with invisible foreground mask(s): {skipped_empty_masks}")
     if skipped_occluded_touches:
         print(f"  skipped occluded/non-visible touches: {skipped_occluded_touches}")
+    if skipped_multi_pair_frames:
+        print(f"  skipped frames with multiple object-pair contacts: {skipped_multi_pair_frames}")
+    if collapsed_duplicate_contact_events:
+        print(f"  collapsed duplicate same-pair contact events: {collapsed_duplicate_contact_events}")
     if skipped_bad_frame:
         print(f"  skipped collisions with invalid frame index: {skipped_bad_frame}")
 
