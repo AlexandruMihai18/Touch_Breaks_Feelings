@@ -115,16 +115,15 @@ def main() -> None:
     parser.add_argument("--metric", choices=["f1", "accuracy"], default="f1",
                         help="Metric to display per bin (default: f1)")
     parser.add_argument("--output", type=Path,   default=None)
-    parser.add_argument("--annotations", nargs="+", type=Path, default=None,
-                        help="Annotation JSON file(s) to join object_coverage into the CSV")
+    parser.add_argument("--annotations", nargs="+", type=Path, required=True,
+                        help="Annotation JSON file(s) providing object_coverage (required; not in prediction CSV)")
     args = parser.parse_args()
 
     if not args.csv.exists():
         raise FileNotFoundError(args.csv)
 
     df = pd.read_csv(args.csv)
-    if args.annotations:
-        df = enrich_df(df, args.annotations)
+    df = enrich_df(df, args.annotations)
 
     if missing := {"label", "prediction", "object_coverage"} - set(df.columns):
         raise ValueError(f"CSV missing columns: {missing}")

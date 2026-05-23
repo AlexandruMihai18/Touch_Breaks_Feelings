@@ -47,12 +47,12 @@ def compute_zone_recall(df: pd.DataFrame, grid: int) -> tuple[np.ndarray, np.nda
     recall = np.full((grid, grid), np.nan)
     count  = np.zeros((grid, grid), dtype=int)
 
-    touch = df.dropna(subset=["x_touch", "y_touch"]).copy()
-    touch["x_touch"] = touch["x_touch"].astype(int)
-    touch["y_touch"] = touch["y_touch"].astype(int)
-    touch = touch[(touch["x_touch"].between(0, grid - 1)) & (touch["y_touch"].between(0, grid - 1))]
+    touch = df.dropna(subset=["x_touch_annot", "y_touch_annot"]).copy()
+    touch["x_touch_annot"] = touch["x_touch_annot"].astype(int)
+    touch["y_touch_annot"] = touch["y_touch_annot"].astype(int)
+    touch = touch[(touch["x_touch_annot"].between(0, grid - 1)) & (touch["y_touch_annot"].between(0, grid - 1))]
 
-    for (y, x), group in touch.groupby(["y_touch", "x_touch"]):
+    for (y, x), group in touch.groupby(["y_touch_annot", "x_touch_annot"]):
         n = len(group)
         count[y, x] = n
         recall[y, x] = (group["prediction"] == group["label"]).sum() / n
@@ -133,18 +133,20 @@ def main() -> None:
                         help="Grid dimension — must match what was used in annotate_touch_zones.py (default: 8)")
     parser.add_argument("--output", type=Path, default=None,
                         help="Output PNG path (default: <csv_stem>_heatmap.png next to the CSV)")
-    parser.add_argument("--annotations", nargs="+", type=Path, default=None,
-                        help="Annotation JSON file(s) to join x_touch/y_touch into the CSV")
+    parser.add_argument("--annotations", nargs="+", type=Path, required=True,
+                        help="Annotation JSON file(s) providing ground-truth grid zones (required; not in prediction CSV)")
     args = parser.parse_args()
 
     if not args.csv.exists():
         raise FileNotFoundError(args.csv)
 
     df = pd.read_csv(args.csv)
-    if args.annotations:
-        df = enrich_df(df, args.annotations)
+    df = enrich_df(df, args.annotations)
+    # Rename annotation touch-zone columns to avoid collision with any x_touch/y_touch
+    # the predictions CSV may carry (model-predicted coordinates vs. ground-truth grid indices).
+    df = df.rename(columns={"x_touch": "x_touch_annot", "y_touch": "y_touch_annot"})
 
-    required = {"label", "prediction", "x_touch", "y_touch"}
+    required = {"label", "prediction", "x_touch_annot", "y_touch_annot"}
     if missing := required - set(df.columns):
         raise ValueError(f"CSV is missing columns: {missing}")
 
