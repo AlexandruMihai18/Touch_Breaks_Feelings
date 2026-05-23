@@ -25,17 +25,21 @@ from PIL import Image
 _ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_ROOT))
 
-from inference_script.src.seggpt import run_seggpt
-from touch_detection_alg.pipeline import annotate_touch
-
 _DATASETS = {
     "epic_kitchen": {
         "ctx_key": "object_name",
-        "agent_mask_key": "hand_mask_path",
+        "mask1_key": "hand_mask_path",
+        "mask2_key": "object_mask_path",
     },
     "greatest_hits": {
         "ctx_key": "video_id",
-        "agent_mask_key": "stick_mask_path",
+        "mask1_key": "stick_mask_path",
+        "mask2_key": "object_mask_path",
+    },
+    "kubric_movi_a_256": {
+        "ctx_key": "object_name",
+        "mask1_key": "object1_mask_path",
+        "mask2_key": "object2_mask_path",
     },
 }
 
@@ -80,6 +84,8 @@ def _predict_masks(
     ctx_label_map: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Run SegGPT with a 2-class prompt. Returns (agent_mask, obj_mask) as uint8 [0,255]."""
+    from inference_script.src.seggpt import run_seggpt
+
     pred = run_seggpt(target_pil, ctx_pil, ctx_label_map, num_labels=2)
     return (pred == 1).astype(np.uint8) * 255, (pred == 2).astype(np.uint8) * 255
 
@@ -96,18 +102,27 @@ def run_inference(
     num_jobs: int = 1,
     job_index: int = 0,
 ) -> list[dict]:
+    from touch_detection_alg.pipeline import annotate_touch
+
     cfg = _DATASETS[dataset]
     anno_dir: Path = data_root / dataset / "annotations"
-    agent_key: str = cfg["agent_mask_key"]
+    mask1_key: str = cfg["mask1_key"]
+    mask2_key: str = cfg["mask2_key"]
 
     with open(anno_dir / "val.json") as f:
         val_samples: list[dict] = json.load(f)
     with open(anno_dir / "val_ctx_index.json") as f:
         val_ctx_index: dict[str, list[int]] = json.load(f)
-    with open(anno_dir / "train.json") as f:
-        train_samples: list[dict] = json.load(f)
-    with open(anno_dir / "train_ctx_index.json") as f:
-        train_ctx_index: dict[str, list[int]] = json.load(f)
+    train_path = anno_dir / "train.json"
+    train_ctx_path = anno_dir / "train_ctx_index.json"
+    if train_path.exists() and train_ctx_path.exists():
+        with open(train_path) as f:
+            train_samples: list[dict] = json.load(f)
+        with open(train_ctx_path) as f:
+            train_ctx_index: dict[str, list[int]] = json.load(f)
+    else:
+        train_samples = []
+        train_ctx_index = {}
 
     rng = random.Random(seed)
     class_names = list(val_ctx_index.keys())
@@ -154,14 +169,14 @@ def run_inference(
 
         try:
             ctx_img = _load_rgb(ctx["image_path"])
-            ctx_agent = _load_mask(ctx[agent_key])
-            ctx_obj = _load_mask(ctx["object_mask_path"])
-        except (FileNotFoundError, OSError) as exc:
+            ctx_mask1 = _load_mask(ctx[mask1_key])
+            ctx_mask2 = _load_mask(ctx[mask2_key])
+        except (KeyError, FileNotFoundError, OSError) as exc:
             log.error("[%d/%d] %r: context load error — %s", cls_i, n_classes, class_name, exc)
             stats["skipped"] += 1
             continue
 
-        ctx_label_map = _make_label_map(ctx_agent, ctx_obj)
+        ctx_label_map = _make_label_map(ctx_mask1, ctx_mask2)
         ctx_pil = Image.fromarray(ctx_img)
 
         log.info(
