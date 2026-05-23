@@ -23,10 +23,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from utils import enrich_df
+import plot_style
 
 
 # ---------------------------------------------------------------------------
@@ -68,48 +70,69 @@ def compute_cluster_stats(df: pd.DataFrame, cluster_map: dict[str, str]) -> pd.D
 # ---------------------------------------------------------------------------
 
 def plot_cluster_bars(stats: pd.DataFrame, output: Path) -> None:
+    plot_style.apply()
+
     clusters = stats["cluster"].tolist()
     x = np.arange(len(clusters))
-    width = 0.2
+    width = 0.22
 
-    fig, (ax_metrics, ax_counts) = plt.subplots(
-        2, 1, figsize=(max(8, len(clusters) * 1.4), 10),
-        gridspec_kw={"height_ratios": [1.2, 1]},
+    fig, (ax_top, ax_bot) = plt.subplots(
+        2, 1,
+        figsize=(max(7.5, len(clusters) * 1.3), 8.5),
+        gridspec_kw={"height_ratios": [1.1, 1.0]},
     )
 
-    # — top: recall / precision / F1 per cluster —
-    ax_metrics.bar(x - width, stats["recall"],    width, label="Recall",    color="#4e9af1")
-    ax_metrics.bar(x,          stats["precision"], width, label="Precision", color="#f18f4e")
-    ax_metrics.bar(x + width,  stats["f1"],        width, label="F1",       color="#6abf69")
-
-    ax_metrics.set_xticks(x)
-    ax_metrics.set_xticklabels(clusters, rotation=30, ha="right", fontsize=9)
-    ax_metrics.set_ylim(0, 1.2)
-    ax_metrics.set_ylabel("Score", fontsize=10)
-    ax_metrics.set_title("Per-cluster metrics", fontsize=12, fontweight="bold")
-    ax_metrics.legend(fontsize=9)
-    ax_metrics.spines[["top", "right"]].set_visible(False)
+    # ── Top: recall / precision / F1 ─────────────────────────────────────────
+    ax_top.bar(x - width, stats["recall"],    width, label="Recall",    color=plot_style.C_RECALL,
+               edgecolor="white", linewidth=0.4, zorder=3, alpha=0.90)
+    ax_top.bar(x,          stats["precision"], width, label="Precision", color=plot_style.C_PREC,
+               edgecolor="white", linewidth=0.4, zorder=3, alpha=0.90)
+    ax_top.bar(x + width,  stats["f1"],        width, label="F1",        color=plot_style.C_F1,
+               edgecolor="white", linewidth=0.4, zorder=3, alpha=0.90)
 
     for i, (_, row) in enumerate(stats.iterrows()):
-        ax_metrics.text(i - width, row["recall"]    + 0.02, f"{row['recall']:.2f}",    ha="center", va="bottom", fontsize=7)
-        ax_metrics.text(i,          row["precision"] + 0.02, f"{row['precision']:.2f}", ha="center", va="bottom", fontsize=7)
-        ax_metrics.text(i + width,  row["f1"]        + 0.02, f"{row['f1']:.2f}",        ha="center", va="bottom", fontsize=7)
+        for offset, col in [(-width, "recall"), (0, "precision"), (width, "f1")]:
+            v = row[col]
+            if not np.isnan(v):
+                ax_top.text(i + offset, v + 0.02, f"{v:.2f}",
+                            ha="center", va="bottom", fontsize=6.5, color=plot_style.DARK)
 
-    # — bottom: TP / TN / FP / FN stacked counts —
-    ax_counts.bar(x, stats["tp"], width * 2.5, label="TP", color="#6abf69")
-    ax_counts.bar(x, stats["tn"], width * 2.5, label="TN", color="#4e9af1",  bottom=stats["tp"])
-    ax_counts.bar(x, stats["fp"], width * 2.5, label="FP", color="#f4a043",  bottom=stats["tp"] + stats["tn"])
-    ax_counts.bar(x, stats["fn"], width * 2.5, label="FN", color="#e05a5a",  bottom=stats["tp"] + stats["tn"] + stats["fp"])
+    ax_top.set_xticks(x)
+    ax_top.set_xticklabels(clusters, rotation=30, ha="right", fontsize=9)
+    ax_top.set_ylim(0, 1.25)
+    ax_top.set_ylabel("Score")
+    ax_top.set_title("Performance metrics by object cluster")
+    ax_top.legend(loc="upper right", ncol=3)
+    ax_top.set_xlim(-0.6, len(clusters) - 0.4)
 
-    ax_counts.set_xticks(x)
-    ax_counts.set_xticklabels(clusters, rotation=30, ha="right", fontsize=9)
-    ax_counts.set_ylabel("Sample count", fontsize=10)
-    ax_counts.set_title("Confusion counts per cluster", fontsize=12, fontweight="bold")
-    ax_counts.legend(fontsize=9)
-    ax_counts.spines[["top", "right"]].set_visible(False)
+    # ── Bottom: TP / TN / FP / FN proportional stacked bars ──────────────────
+    totals = stats[["tp", "tn", "fp", "fn"]].sum(axis=1).values
+    tp_p = stats["tp"].values / totals
+    tn_p = stats["tn"].values / totals
+    fp_p = stats["fp"].values / totals
+    fn_p = stats["fn"].values / totals
 
-    plt.tight_layout()
-    plt.savefig(output, dpi=150, bbox_inches="tight")
+    bar_w = 0.55
+    ax_bot.bar(x, tp_p,                         width=bar_w, label="TP", color=plot_style.C_TP, zorder=3)
+    ax_bot.bar(x, tn_p, bottom=tp_p,            width=bar_w, label="TN", color=plot_style.C_TN, zorder=3)
+    ax_bot.bar(x, fp_p, bottom=tp_p + tn_p,     width=bar_w, label="FP", color=plot_style.C_FP, zorder=3)
+    ax_bot.bar(x, fn_p, bottom=tp_p + tn_p + fp_p, width=bar_w, label="FN", color=plot_style.C_FN, zorder=3)
+
+    for i, (_, row) in enumerate(stats.iterrows()):
+        ax_bot.text(i, -0.06, f"n={row['n']}", ha="center", va="top",
+                    fontsize=7.5, color=plot_style.GRAY,
+                    transform=ax_bot.get_xaxis_transform())
+
+    ax_bot.set_xticks(x)
+    ax_bot.set_xticklabels(clusters, rotation=30, ha="right", fontsize=9)
+    ax_bot.set_ylim(0, 1.18)
+    ax_bot.set_ylabel("Proportion of samples")
+    ax_bot.set_title("Confusion breakdown per cluster  (proportional)")
+    ax_bot.legend(loc="upper right", ncol=4)
+    ax_bot.set_xlim(-0.6, len(clusters) - 0.4)
+    ax_bot.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
+
+    plt.savefig(output)
     plt.close(fig)
 
 
@@ -157,7 +180,6 @@ def main() -> None:
     print(f"\nPer-cluster results (n={len(df)}):\n")
     print(stats[cols].to_string(index=False, float_format=lambda v: f"{v:.3f}"))
 
-    # Global
     y_true = df["label"].astype(int)
     y_pred = df["prediction"].astype(int)
     cm = confusion_matrix(y_true, y_pred, labels=[0, 1])

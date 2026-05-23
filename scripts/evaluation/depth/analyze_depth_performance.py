@@ -19,10 +19,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from utils import enrich_df
+import plot_style
 
 
 def compute_bin_stats(df: pd.DataFrame, n_bins: int) -> pd.DataFrame:
@@ -55,39 +57,67 @@ def compute_bin_stats(df: pd.DataFrame, n_bins: int) -> pd.DataFrame:
 
 
 def plot_depth_bars(stats: pd.DataFrame, output_path: Path) -> None:
-    fig, ax = plt.subplots(figsize=(max(6, len(stats) * 1.2), 5))
+    plot_style.apply()
 
-    cmap  = plt.cm.RdYlGn
-    norm  = plt.Normalize(0, 1)
-    bars  = ax.bar(
-        range(len(stats)),
+    n = len(stats)
+    fig, ax = plt.subplots(figsize=(max(5.5, n * 1.1), 4.0))
+
+    cmap = plt.cm.RdYlGn
+    norm = mpl.colors.Normalize(vmin=0, vmax=1)
+    colors = [cmap(norm(v)) for v in stats["recall"]]
+
+    bars = ax.bar(
+        range(n),
         stats["recall"],
-        color=[cmap(norm(v)) for v in stats["recall"]],
+        color=colors,
         edgecolor="white",
-        linewidth=0.8,
-        width=0.6,
+        linewidth=0.6,
+        width=0.58,
+        zorder=3,
     )
 
+    # Value + count labels above each bar
     for i, (_, row) in enumerate(stats.iterrows()):
-        ax.text(i, row["recall"] + 0.02, f"{row['recall']:.2f}\nn={row['n']}",
-                ha="center", va="bottom", fontsize=9)
+        ax.text(
+            i, row["recall"] + 0.025,
+            f"{row['recall']:.2f}",
+            ha="center", va="bottom", fontsize=9, fontweight="semibold",
+            color=plot_style.DARK,
+        )
+        ax.text(
+            i, -0.055,
+            f"n={row['n']}",
+            ha="center", va="top", fontsize=7.5, color=plot_style.GRAY,
+            transform=ax.get_xaxis_transform(),
+        )
 
-    ax.set_xticks(range(len(stats)))
+    mean_recall = stats["recall"].mean()
+    ax.axhline(
+        mean_recall, color=plot_style.DARK, linestyle="--", linewidth=1.0,
+        label=f"Mean recall = {mean_recall:.2f}", zorder=4,
+    )
+
+    # Colorbar legend
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax, pad=0.01, fraction=0.03, aspect=25)
+    cbar.set_label("Recall", fontsize=9)
+    cbar.ax.tick_params(labelsize=8)
+    cbar.outline.set_linewidth(0.5)
+
+    ax.set_xticks(range(n))
     ax.set_xticklabels(stats["bin_label"], rotation=30, ha="right", fontsize=9)
     ax.set_xlabel(
-        "Depth bin  (inferno colormap of Depth-Anything-V2 disparity — low = dark/purple = far,  high = bright/yellow = near)",
-        fontsize=9,
+        "Depth bin  (disparity value — low = far,  high = near)",
+        labelpad=8,
     )
-    ax.set_ylabel("Recall (hit rate)", fontsize=10)
-    ax.set_ylim(0, 1.15)
-    ax.set_title("Per-depth-bin recall\n(touch-positive samples only)", fontsize=12, fontweight="bold")
-    ax.axhline(stats["recall"].mean(), color="black", linestyle="--", linewidth=1,
-               label=f"mean recall = {stats['recall'].mean():.2f}")
-    ax.legend(fontsize=9)
-    ax.spines[["top", "right"]].set_visible(False)
+    ax.set_ylabel("Recall")
+    ax.set_ylim(0, 1.18)
+    ax.set_xlim(-0.55, n - 0.45)
+    ax.set_title("Touch-detection recall by depth bin\n(touch-positive samples only)")
+    ax.legend(loc="upper left", fontsize=9)
 
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.savefig(output_path)
     plt.close(fig)
 
 
@@ -126,7 +156,6 @@ def main() -> None:
     print(f"Saved → {output}")
     print(f"\nPer-bin recall:\n{stats[['bin_label', 'n', 'recall']].to_string(index=False)}")
 
-    # Global stats over depth-annotated touch samples
     touch = df.dropna(subset=["depth_touch"])
     if len(touch) > 0:
         gs = global_stats(touch)
