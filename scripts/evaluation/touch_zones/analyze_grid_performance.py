@@ -96,7 +96,7 @@ def plot_heatmap(
     fig, ax = plt.subplots(figsize=(6.0, 5.5))
 
     masked = np.ma.masked_invalid(recall)
-    im = ax.imshow(masked, cmap=cmap, vmin=0, vmax=1, aspect="equal")
+    im = ax.imshow(masked, cmap=cmap, vmin=0.5, vmax=1, aspect="equal")
 
     cbar = fig.colorbar(im, ax=ax, pad=0.02, fraction=0.046, aspect=20)
     cbar.set_label(metric_label, fontsize=9)
