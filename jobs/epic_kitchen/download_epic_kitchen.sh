@@ -25,8 +25,8 @@ source activate touch_from_segmentation
 
 cd "$HOME/Touch_Breaks_Feelings"
 
-DATA="./data/epic_kitchen"
-VISOR_ANNO="${DATA}/visor/GroundTruth-SparseAnnotations/annotations"
+EK_ROOT="/scratch-shared/$(whoami)/epic_kitchen"
+VISOR_ANNO="${EK_ROOT}/visor/GroundTruth-SparseAnnotations/annotations"
 
 # Pass 1: VISOR train — every contact + no-contact frame
 python -m scripts.epic_kitchen.download_epic_kitchen \
@@ -34,7 +34,7 @@ python -m scripts.epic_kitchen.download_epic_kitchen \
     --all \
     --split train \
     --workers "${SLURM_CPUS_PER_TASK}" \
-    --output-dir "${DATA}" \
+    --output-dir "${EK_ROOT}" \
     --skip-annotations \
     --skip-verify
 
@@ -44,23 +44,23 @@ python -m scripts.epic_kitchen.download_epic_kitchen \
     --match-no-contact \
     --split val \
     --workers "${SLURM_CPUS_PER_TASK}" \
-    --output-dir "${DATA}" \
+    --output-dir "${EK_ROOT}" \
     --skip-annotations \
     --skip-verify
 
 # Phase 5a: train.json — only VISOR train video IDs, no internal split
 python -m scripts.epic_kitchen.download_epic_kitchen.generate_annotations \
-    --frames_dir "${DATA}/frames" \
-    --masks_dir  "${DATA}/masks" \
-    --output_dir "${DATA}/annotations" \
+    --frames_dir "${EK_ROOT}/frames" \
+    --masks_dir  "${EK_ROOT}/masks" \
+    --output_dir "${EK_ROOT}/annotations" \
     --video-ids-dir "${VISOR_ANNO}/train" \
     --output-name train
 
 # Phase 5b: val.json — only VISOR val video IDs, no internal split
 python -m scripts.epic_kitchen.download_epic_kitchen.generate_annotations \
-    --frames_dir "${DATA}/frames" \
-    --masks_dir  "${DATA}/masks" \
-    --output_dir "${DATA}/annotations" \
+    --frames_dir "${EK_ROOT}/frames" \
+    --masks_dir  "${EK_ROOT}/masks" \
+    --output_dir "${EK_ROOT}/annotations" \
     --video-ids-dir "${VISOR_ANNO}/val" \
     --output-name val
 

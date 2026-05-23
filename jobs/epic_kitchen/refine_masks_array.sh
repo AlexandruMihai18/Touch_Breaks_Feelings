@@ -29,9 +29,10 @@ source activate touch_from_segmentation
 cd "$HOME/Touch_Breaks_Feelings"
 
 N_JOBS=8
+EK_ROOT="/scratch-shared/$(whoami)/epic_kitchen"
 
 python scripts/epic_kitchen/repair_depth_masks.py \
-    --anno-dir  "./data/epic_kitchen/annotations" \
+    --anno-dir  "${EK_ROOT}/annotations" \
     --splits    train val \
     --num-jobs  "${N_JOBS}" \
     --job-index "${SLURM_ARRAY_TASK_ID}"

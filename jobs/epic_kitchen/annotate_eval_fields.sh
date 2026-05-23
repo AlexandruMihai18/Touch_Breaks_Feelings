@@ -22,7 +22,7 @@ source activate touch_from_segmentation
 
 cd "$HOME/Touch_Breaks_Feelings"
 
-ANNOTATIONS=/scratch-shared/dotero/epic_kitchen/annotations/val.json
+ANNOTATIONS="/scratch-shared/$(whoami)/epic_kitchen/annotations/val.json"
 
 # Object coverage — uses object_mask_path already recorded in the annotation.
 python scripts/evaluation/object_coverage/annotate_object_coverage.py \

@@ -22,21 +22,21 @@ source activate touch_from_segmentation
 
 cd "$HOME/Touch_Breaks_Feelings"
 
-DATA="./data/epic_kitchen"
-VISOR_ANNO="${DATA}/visor/GroundTruth-SparseAnnotations/annotations"
+EK_ROOT="/scratch-shared/$(whoami)/epic_kitchen"
+VISOR_ANNO="${EK_ROOT}/visor/GroundTruth-SparseAnnotations/annotations"
 
 # train.json — VISOR train video IDs only
 python -m scripts.epic_kitchen.download_epic_kitchen.generate_annotations \
-    --frames_dir "${DATA}/frames" \
-    --masks_dir  "${DATA}/masks" \
-    --output_dir "${DATA}/annotations" \
+    --frames_dir "${EK_ROOT}/frames" \
+    --masks_dir  "${EK_ROOT}/masks" \
+    --output_dir "${EK_ROOT}/annotations" \
     --video-ids-dir "${VISOR_ANNO}/train" \
     --output-name train
 
 # val.json — VISOR val video IDs only
 python -m scripts.epic_kitchen.download_epic_kitchen.generate_annotations \
-    --frames_dir "${DATA}/frames" \
-    --masks_dir  "${DATA}/masks" \
-    --output_dir "${DATA}/annotations" \
+    --frames_dir "${EK_ROOT}/frames" \
+    --masks_dir  "${EK_ROOT}/masks" \
+    --output_dir "${EK_ROOT}/annotations" \
     --video-ids-dir "${VISOR_ANNO}/val" \
     --output-name val
