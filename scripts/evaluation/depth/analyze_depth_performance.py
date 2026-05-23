@@ -48,6 +48,9 @@ def compute_bin_stats(df: pd.DataFrame, n_bins: int) -> pd.DataFrame:
             "recall":    hits / n,
         })
 
+    if not rows:
+        return None
+
     return pd.DataFrame(rows).sort_values("depth_mid")
 
 
@@ -94,16 +97,15 @@ def main() -> None:
     parser.add_argument("--n-bins", type=int, default=5,
                         help="Number of quantile depth bins (default: 5)")
     parser.add_argument("--output", type=Path, default=None)
-    parser.add_argument("--annotations", nargs="+", type=Path, default=None,
-                        help="Annotation JSON file(s) to join depth_touch into the CSV")
+    parser.add_argument("--annotations", nargs="+", type=Path, required=True,
+                        help="Annotation JSON file(s) providing depth_touch (required; not in prediction CSV)")
     args = parser.parse_args()
 
     if not args.csv.exists():
         raise FileNotFoundError(args.csv)
 
     df = pd.read_csv(args.csv)
-    if args.annotations:
-        df = enrich_df(df, args.annotations)
+    df = enrich_df(df, args.annotations)
 
     required = {"label", "prediction", "depth_touch"}
     if missing := required - set(df.columns):
