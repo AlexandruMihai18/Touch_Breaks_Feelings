@@ -36,7 +36,7 @@ _DATASETS = {
         "mask1_key": "stick_mask_path",
         "mask2_key": "object_mask_path",
     },
-    "kubric_movi_a_256": {
+    "kubric": {
         "ctx_key": "object_name",
         "mask1_key": "object1_mask_path",
         "mask2_key": "object2_mask_path",
