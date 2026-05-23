@@ -4,11 +4,13 @@ Applies in order:
   1. annotate_touch_depth      → depth_touch
   2. annotate_touch_zones      → x_touch, y_touch
   3. annotate_object_coverage  → object_coverage
+  4. annotate_object_classes   → general_class, gh_class
+     (only when --clusters-dir is provided or cluster JSONs are found under
+      <data_root>/epic_kitchen/)
 
 Datasets (train + val splits):
   - <data_root>/greatest_hits/annotations/
   - <data_root>/epic_kitchen/annotations/
-  - <data_root>/manual_annotations/annotations/
 
 --data-root defaults to the repo's data/ directory; override to use scratch:
     --data-root /scratch-shared/$USER
@@ -18,6 +20,8 @@ Usage
     python scripts/evaluation/run_all_annotations.py [--force] [--dry-run]
     python scripts/evaluation/run_all_annotations.py --datasets gh ek [--force]
     python scripts/evaluation/run_all_annotations.py --data-root /scratch-shared/$USER
+    python scripts/evaluation/run_all_annotations.py --data-root /scratch-shared/$USER \\
+        --clusters-dir /scratch-shared/$USER/epic_kitchen
 """
 
 from __future__ import annotations
@@ -28,11 +32,11 @@ from pathlib import Path
 from depth.annotate_touch_depth import annotate_file as annotate_depth
 from touch_zones.annotate_touch_zones import annotate_file as annotate_zones
 from object_coverage.annotate_object_coverage import annotate_file as annotate_coverage
+from object_classes.annotate_object_classes import annotate_file as annotate_classes
 
 DATASET_SUBDIRS = {
     "gh": Path("greatest_hits/annotations"),
     "ek": Path("epic_kitchen/annotations"),
-    "ma": Path("manual_annotations/annotations"),
 }
 
 SPLITS = ["train.json", "val.json"]
@@ -65,6 +69,10 @@ def main() -> None:
                         help="Grid dimension for touch zones (default: 8)")
     parser.add_argument("--min-blob-area", type=int, default=100, metavar="PX",
                         help="Minimum blob area for touch zones (default: 100)")
+    parser.add_argument("--clusters-dir", type=Path, default=None, metavar="DIR",
+                        help="Directory containing object_clusters_7.json and "
+                             "object_clusters_gh.json (default: <data_root>/epic_kitchen/). "
+                             "Object-class annotation is skipped if the files are not found.")
     parser.add_argument("--force", action="store_true",
                         help="Re-compute even if fields already set")
     parser.add_argument("--dry-run", action="store_true",
@@ -73,10 +81,24 @@ def main() -> None:
 
     data_root = args.data_root if args.data_root else Path(__file__).resolve().parents[2] / "data"
 
+    clusters_dir = args.clusters_dir if args.clusters_dir else data_root / "epic_kitchen"
+    path_7  = clusters_dir / "object_clusters_7.json"
+    path_gh = clusters_dir / "object_clusters_gh.json"
+    if path_7.exists() and path_gh.exists():
+        import json as _json
+        _clusters_7  = _json.loads(path_7.read_text())
+        _clusters_gh = _json.loads(path_gh.read_text())
+        _classes_fn  = lambda p: annotate_classes(p, _clusters_7, _clusters_gh, args.force, args.dry_run)
+        print(f"Object-class clusters loaded from {clusters_dir}")
+    else:
+        _classes_fn = None
+        print(f"[SKIP] object-class annotation — cluster JSONs not found in {clusters_dir}")
+
     annotators = [
         ("depth_touch",      lambda p: annotate_depth(p, args.force, args.dry_run)),
         ("x/y_touch",        lambda p: annotate_zones(p, args.grid, args.min_blob_area, args.force, args.dry_run)),
         ("object_coverage",  lambda p: annotate_coverage(p, args.force, args.dry_run)),
+        *([("general/gh_class", _classes_fn)] if _classes_fn else []),
     ]
 
     for ds_key in args.datasets:
