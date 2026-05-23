@@ -23,10 +23,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from utils import enrich_df
+import plot_style
 
 
 def compute_bin_stats(df: pd.DataFrame, n_bins: int) -> pd.DataFrame:
@@ -56,42 +58,62 @@ def compute_bin_stats(df: pd.DataFrame, n_bins: int) -> pd.DataFrame:
 
 
 def plot_bars(stats: pd.DataFrame, metric: str, output: Path) -> None:
-    fig, ax = plt.subplots(figsize=(max(6, len(stats) * 1.4), 5))
+    plot_style.apply()
+
+    n = len(stats)
+    fig, ax = plt.subplots(figsize=(max(5.5, n * 1.1), 4.0))
 
     cmap = plt.cm.RdYlGn
-    norm = plt.Normalize(0, 1)
+    norm = mpl.colors.Normalize(vmin=0, vmax=1)
     vals = stats[metric].values
+    colors = [cmap(norm(v)) for v in vals]
 
-    bars = ax.bar(
-        range(len(stats)),
-        vals,
-        color=[cmap(norm(v)) for v in vals],
+    ax.bar(
+        range(n), vals,
+        color=colors,
         edgecolor="white",
-        linewidth=0.8,
-        width=0.6,
+        linewidth=0.6,
+        width=0.58,
+        zorder=3,
     )
 
     for i, (_, row) in enumerate(stats.iterrows()):
         ax.text(
-            i, row[metric] + 0.02,
-            f"{row[metric]:.2f}\nn={row['n']}\ntouch={row['n_touch']}",
-            ha="center", va="bottom", fontsize=8,
+            i, row[metric] + 0.025,
+            f"{row[metric]:.2f}",
+            ha="center", va="bottom", fontsize=9, fontweight="semibold",
+            color=plot_style.DARK,
+        )
+        ax.text(
+            i, -0.055,
+            f"n={row['n']}  ({row['n_touch']} touch)",
+            ha="center", va="top", fontsize=7.0, color=plot_style.GRAY,
+            transform=ax.get_xaxis_transform(),
         )
 
-    ax.set_xticks(range(len(stats)))
-    ax.set_xticklabels(stats["bin_label"], rotation=30, ha="right", fontsize=9)
-    ax.set_xlabel("Object coverage bin  (nonzero pixels / total pixels)", fontsize=10)
-    ax.set_ylabel(metric.capitalize(), fontsize=10)
-    ax.set_ylim(0, 1.2)
-    ax.axhline(stats[metric].mean(), color="black", linestyle="--", linewidth=1,
-               label=f"mean {metric} = {stats[metric].mean():.2f}")
-    ax.set_title(f"Per-coverage-bin {metric.capitalize()}\n(all samples — touch and no-touch)",
-                 fontsize=12, fontweight="bold")
-    ax.legend(fontsize=9)
-    ax.spines[["top", "right"]].set_visible(False)
+    mean_val = stats[metric].mean()
+    ax.axhline(
+        mean_val, color=plot_style.DARK, linestyle="--", linewidth=1.0,
+        label=f"Mean {metric} = {mean_val:.2f}", zorder=4,
+    )
 
-    plt.tight_layout()
-    plt.savefig(output, dpi=150, bbox_inches="tight")
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax, pad=0.01, fraction=0.03, aspect=25)
+    cbar.set_label(metric.capitalize(), fontsize=9)
+    cbar.ax.tick_params(labelsize=8)
+    cbar.outline.set_linewidth(0.5)
+
+    ax.set_xticks(range(n))
+    ax.set_xticklabels(stats["bin_label"], rotation=30, ha="right", fontsize=9)
+    ax.set_xlabel("Object coverage bin  (foreground pixels / total pixels)", labelpad=8)
+    ax.set_ylabel(metric.capitalize())
+    ax.set_ylim(0, 1.18)
+    ax.set_xlim(-0.55, n - 0.45)
+    ax.set_title(f"Touch-detection {metric.upper()} by object coverage bin\n(all samples — touch and no-touch)")
+    ax.legend(loc="upper left", fontsize=9)
+
+    plt.savefig(output)
     plt.close(fig)
 
 

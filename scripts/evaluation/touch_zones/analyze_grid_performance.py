@@ -28,10 +28,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from utils import enrich_df
+import plot_style
 
 
 # ---------------------------------------------------------------------------
@@ -83,38 +85,54 @@ def plot_heatmap(
     metric_label: str,
     output_path: Path,
 ) -> None:
+    plot_style.apply()
+
     grid = recall.shape[0]
 
+    # Use RdYlGn but mask invalid cells with a light neutral grey
     cmap = plt.cm.RdYlGn.copy()
-    cmap.set_bad(color="#dddddd")
+    cmap.set_bad(color="#EBEBEB")
 
-    fig, ax = plt.subplots(figsize=(7, 6))
+    fig, ax = plt.subplots(figsize=(6.0, 5.5))
+
     masked = np.ma.masked_invalid(recall)
     im = ax.imshow(masked, cmap=cmap, vmin=0, vmax=1, aspect="equal")
-    cbar = plt.colorbar(im, ax=ax)
-    cbar.set_label(metric_label, fontsize=11)
+
+    cbar = fig.colorbar(im, ax=ax, pad=0.02, fraction=0.046, aspect=20)
+    cbar.set_label(metric_label, fontsize=9)
+    cbar.ax.tick_params(labelsize=8)
+    cbar.outline.set_linewidth(0.5)
 
     for y in range(grid):
         for x in range(grid):
             n = count[y, x]
             if n == 0:
-                ax.text(x, y, "–", ha="center", va="center", fontsize=9, color="#999999")
+                ax.text(x, y, "–", ha="center", va="center",
+                        fontsize=8, color="#AAAAAA")
             else:
                 v = recall[y, x]
-                cell_txt = f"{v:.2f}\nn={n}"
-                text_color = "white" if v < 0.35 or v > 0.75 else "black"
-                ax.text(x, y, cell_txt, ha="center", va="center", fontsize=7.5, color=text_color)
+                txt = f"{v:.2f}\n({n})"
+                fg = "white" if (v < 0.30 or v > 0.78) else plot_style.DARK
+                ax.text(x, y, txt, ha="center", va="center",
+                        fontsize=7.0, color=fg, linespacing=1.35)
+
+    # Grid lines between cells
+    for i in range(grid + 1):
+        ax.axhline(i - 0.5, color="white", linewidth=0.8)
+        ax.axvline(i - 0.5, color="white", linewidth=0.8)
 
     ax.set_xticks(range(grid))
     ax.set_yticks(range(grid))
-    ax.set_xticklabels([str(i) for i in range(grid)])
-    ax.set_yticklabels([str(i) for i in range(grid)])
-    ax.set_xlabel("x zone  (left → right)", fontsize=11)
-    ax.set_ylabel("y zone  (top → bottom)", fontsize=11)
-    ax.set_title(f"Per-zone {metric_label}\n(touch-positive samples only)", fontsize=12, fontweight="bold")
+    ax.set_xticklabels([str(i) for i in range(grid)], fontsize=8)
+    ax.set_yticklabels([str(i) for i in range(grid)], fontsize=8)
+    ax.set_xlabel("x zone  (left → right)", labelpad=6)
+    ax.set_ylabel("y zone  (top → bottom)", labelpad=6)
+    ax.set_title(f"Per-zone {metric_label}\n(touch-positive samples only)")
 
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    # Turn off the y-axis grid that rcParams enables (grid on imshow looks bad)
+    ax.grid(False)
+
+    plt.savefig(output_path)
     plt.close(fig)
 
 
@@ -142,8 +160,6 @@ def main() -> None:
 
     df = pd.read_csv(args.csv)
     df = enrich_df(df, args.annotations)
-    # Rename annotation touch-zone columns to avoid collision with any x_touch/y_touch
-    # the predictions CSV may carry (model-predicted coordinates vs. ground-truth grid indices).
     df = df.rename(columns={"x_touch": "x_touch_annot", "y_touch": "y_touch_annot"})
 
     required = {"label", "prediction", "x_touch_annot", "y_touch_annot"}
@@ -165,7 +181,6 @@ def main() -> None:
         f"  TP={stats['tp']}  FP={stats['fp']}  FN={stats['fn']}  TN={stats['tn']}"
     )
 
-    # Per-zone summary: zones sorted by recall (descending)
     rows = []
     for y in range(args.grid):
         for x in range(args.grid):
