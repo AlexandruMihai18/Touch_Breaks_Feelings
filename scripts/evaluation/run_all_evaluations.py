@@ -91,7 +91,11 @@ def main() -> None:
                         help="Quantile bins for depth and coverage analyses (default: 5)")
     parser.add_argument("--grid", type=int, default=8,
                         help="Grid dimension for the touch-zone heatmap (default: 8)")
-    parser.add_argument("--metric", choices=["f1", "accuracy"], default="f1",
+    parser.add_argument("--depth-metric", choices=["recall", "accuracy"], default="recall",
+                        help="Metric label for the depth bar chart (default: recall)")
+    parser.add_argument("--zones-metric", choices=["recall", "accuracy"], default="recall",
+                        help="Metric label for the touch-zone heatmap (default: recall)")
+    parser.add_argument("--coverage-metric", choices=["f1", "accuracy"], default="f1",
                         help="Metric shown in the coverage bar chart (default: f1)")
 
     # Step selection
@@ -128,6 +132,7 @@ def main() -> None:
             [py, str(_SCRIPTS["depth"]),
              str(args.csv),
              "--n-bins", str(args.n_bins),
+             "--metric", args.depth_metric,
              "--output", str(out),
              *ann_args],
             "depth",
@@ -178,6 +183,7 @@ def main() -> None:
             [py, str(_SCRIPTS["zones"]),
              str(args.csv),
              "--grid",   str(args.grid),
+             "--metric", args.zones_metric,
              "--output", str(out),
              *ann_args],
             "zones",

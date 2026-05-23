@@ -56,7 +56,7 @@ def compute_bin_stats(df: pd.DataFrame, n_bins: int) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values("depth_mid")
 
 
-def plot_depth_bars(stats: pd.DataFrame, output_path: Path) -> None:
+def plot_depth_bars(stats: pd.DataFrame, metric_label: str, output_path: Path) -> None:
     plot_style.apply()
 
     n = len(stats)
@@ -66,7 +66,7 @@ def plot_depth_bars(stats: pd.DataFrame, output_path: Path) -> None:
     norm = mpl.colors.Normalize(vmin=0, vmax=1)
     colors = [cmap(norm(v)) for v in stats["recall"]]
 
-    bars = ax.bar(
+    ax.bar(
         range(n),
         stats["recall"],
         color=colors,
@@ -91,17 +91,16 @@ def plot_depth_bars(stats: pd.DataFrame, output_path: Path) -> None:
             transform=ax.get_xaxis_transform(),
         )
 
-    mean_recall = stats["recall"].mean()
+    mean_val = stats["recall"].mean()
     ax.axhline(
-        mean_recall, color=plot_style.DARK, linestyle="--", linewidth=1.0,
-        label=f"Mean recall = {mean_recall:.2f}", zorder=4,
+        mean_val, color=plot_style.DARK, linestyle="--", linewidth=1.0,
+        label=f"Mean {metric_label.lower()} = {mean_val:.2f}", zorder=4,
     )
 
-    # Colorbar legend
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
     cbar = fig.colorbar(sm, ax=ax, pad=0.01, fraction=0.03, aspect=25)
-    cbar.set_label("Recall", fontsize=9)
+    cbar.set_label(metric_label, fontsize=9)
     cbar.ax.tick_params(labelsize=8)
     cbar.outline.set_linewidth(0.5)
 
@@ -111,10 +110,10 @@ def plot_depth_bars(stats: pd.DataFrame, output_path: Path) -> None:
         "Depth bin  (disparity value — low = far,  high = near)",
         labelpad=8,
     )
-    ax.set_ylabel("Recall")
+    ax.set_ylabel(metric_label)
     ax.set_ylim(0, 1.18)
     ax.set_xlim(-0.55, n - 0.45)
-    ax.set_title("Touch-detection recall by depth bin\n(touch-positive samples only)")
+    ax.set_title(f"Touch-detection {metric_label.lower()} by depth bin\n(touch-positive samples only)")
     ax.legend(loc="upper left", fontsize=9)
 
     plt.savefig(output_path)
@@ -126,6 +125,9 @@ def main() -> None:
     parser.add_argument("csv", type=Path)
     parser.add_argument("--n-bins", type=int, default=5,
                         help="Number of quantile depth bins (default: 5)")
+    parser.add_argument("--metric", choices=["recall", "accuracy"], default="recall",
+                        help="Metric label shown on the figure (default: recall). "
+                             "Both are equivalent on touch-only samples; choose the label you prefer.")
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument("--annotations", nargs="+", type=Path, required=True,
                         help="Annotation JSON file(s) providing depth_touch (required; not in prediction CSV)")
@@ -141,6 +143,7 @@ def main() -> None:
     if missing := required - set(df.columns):
         raise ValueError(f"CSV missing columns: {missing}")
 
+    metric_label = "Recall (hit rate)" if args.metric == "recall" else "Accuracy"
     output = args.output or args.csv.with_name(args.csv.stem + "_depth_perf.png")
     stats  = compute_bin_stats(df, args.n_bins)
     if stats is None:
@@ -152,9 +155,9 @@ def main() -> None:
             f"       annotate_touch_depth.py may not support this dataset's depth format."
         )
         return
-    plot_depth_bars(stats, output)
+    plot_depth_bars(stats, metric_label, output)
     print(f"Saved → {output}")
-    print(f"\nPer-bin recall:\n{stats[['bin_label', 'n', 'recall']].to_string(index=False)}")
+    print(f"\nPer-bin {args.metric}:\n{stats[['bin_label', 'n', 'recall']].to_string(index=False)}")
 
     touch = df.dropna(subset=["depth_touch"])
     if len(touch) > 0:
