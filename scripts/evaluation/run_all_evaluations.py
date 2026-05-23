@@ -109,6 +109,9 @@ def main() -> None:
                         choices=list(_SCRIPTS), default=[],
                         metavar="STEP",
                         help="Steps to skip: depth object coverage zones")
+    parser.add_argument("--all-metrics", action="store_true",
+                        help="Pass --all-metrics to every analysis script: generates one figure per "
+                             "metric with a _<metric> suffix. Per-script --*-metric flags are ignored.")
 
     args = parser.parse_args()
 
@@ -129,21 +132,23 @@ def main() -> None:
     py = sys.executable
     ann_args = [a for p in args.annotations for a in ("--annotations", str(p))]
     skipped = set(args.skip or [])
+    all_m = args.all_metrics
     results: dict[str, str] = {}
 
     # ── 1. Depth ──────────────────────────────────────────────────────────────
     if "depth" not in skipped:
         out = out_dir / _OUTPUTS["depth"]
+        metric_args = ["--all-metrics"] if all_m else ["--metric", args.depth_metric]
         ok = _run(
             [py, str(_SCRIPTS["depth"]),
              str(args.csv),
              "--n-bins", str(args.n_bins),
-             "--metric", args.depth_metric,
+             *metric_args,
              "--output", str(out),
              *ann_args],
             "depth",
         )
-        results["depth"] = str(out) if ok else "FAILED"
+        results["depth"] = str(out_dir / "depth_performance_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
     else:
         results["depth"] = "SKIPPED"
 
@@ -154,48 +159,51 @@ def main() -> None:
             results["object"] = "SKIPPED (no --clusters)"
         else:
             out = out_dir / _OUTPUTS["object"]
+            metric_args = ["--all-metrics"] if all_m else ["--metric", args.object_metric]
             ok = _run(
                 [py, str(_SCRIPTS["object"]),
                  str(args.csv),
                  "--clusters", str(args.clusters),
-                 "--metric",   args.object_metric,
+                 *metric_args,
                  "--output",   str(out),
                  *ann_args],
                 "object",
             )
-            results["object"] = str(out) if ok else "FAILED"
+            results["object"] = str(out_dir / "object_performance_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
     else:
         results["object"] = "SKIPPED"
 
     # ── 3. Coverage ───────────────────────────────────────────────────────────
     if "coverage" not in skipped:
         out = out_dir / _OUTPUTS["coverage"]
+        metric_args = ["--all-metrics"] if all_m else ["--metric", args.coverage_metric]
         ok = _run(
             [py, str(_SCRIPTS["coverage"]),
              str(args.csv),
              "--n-bins", str(args.n_bins),
-             "--metric",  args.coverage_metric,
+             *metric_args,
              "--output",  str(out),
              *ann_args],
             "coverage",
         )
-        results["coverage"] = str(out) if ok else "FAILED"
+        results["coverage"] = str(out_dir / "coverage_performance_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
     else:
         results["coverage"] = "SKIPPED"
 
     # ── 4. Touch zones ────────────────────────────────────────────────────────
     if "zones" not in skipped:
         out = out_dir / _OUTPUTS["zones"]
+        metric_args = ["--all-metrics"] if all_m else ["--metric", args.zones_metric]
         ok = _run(
             [py, str(_SCRIPTS["zones"]),
              str(args.csv),
              "--grid",   str(args.grid),
-             "--metric", args.zones_metric,
+             *metric_args,
              "--output", str(out),
              *ann_args],
             "zones",
         )
-        results["zones"] = str(out) if ok else "FAILED"
+        results["zones"] = str(out_dir / "grid_heatmap_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
     else:
         results["zones"] = "SKIPPED"
 

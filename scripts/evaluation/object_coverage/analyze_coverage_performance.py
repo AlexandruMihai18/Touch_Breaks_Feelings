@@ -137,10 +137,14 @@ def global_stats(df: pd.DataFrame) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("csv", type=Path)
-    parser.add_argument("--n-bins", type=int,    default=5,        help="Number of quantile coverage bins (default: 5)")
-    parser.add_argument("--metric", choices=["recall", "precision", "f1", "accuracy"],
-                        default="f1", help="Metric to display per bin (default: f1)")
-    parser.add_argument("--output", type=Path,   default=None)
+    _METRICS = ["recall", "precision", "f1", "accuracy"]
+    parser.add_argument("--n-bins", type=int, default=5, help="Number of quantile coverage bins (default: 5)")
+    parser.add_argument("--metric", choices=_METRICS, default="f1",
+                        help="Metric to display per bin (default: f1)")
+    parser.add_argument("--all-metrics", action="store_true",
+                        help=f"Generate one figure per metric {_METRICS}, each suffixed with the metric name. "
+                             "Overrides --metric.")
+    parser.add_argument("--output", type=Path, default=None)
     parser.add_argument("--annotations", nargs="+", type=Path, required=True,
                         help="Annotation JSON file(s) providing object_coverage (required; not in prediction CSV)")
     args = parser.parse_args()
@@ -154,12 +158,16 @@ def main() -> None:
     if missing := {"label", "prediction", "object_coverage"} - set(df.columns):
         raise ValueError(f"CSV missing columns: {missing}")
 
-    output = args.output or args.csv.with_name(args.csv.stem + "_coverage_perf.png")
-    stats  = compute_bin_stats(df, args.n_bins)
-    plot_bars(stats, args.metric, output)
-    print(f"Saved → {output}")
-    all_metrics = ["recall", "precision", "f1", "accuracy"]
-    print(f"\nPer-bin {args.metric}:\n{stats[['bin_label', 'n', 'n_touch'] + all_metrics].to_string(index=False, float_format=lambda v: f'{v:.3f}')}")
+    base_output = args.output or args.csv.with_name(args.csv.stem + "_coverage_perf.png")
+    stats = compute_bin_stats(df, args.n_bins)
+
+    metrics = _METRICS if args.all_metrics else [args.metric]
+    for metric in metrics:
+        out = plot_style.with_metric_suffix(base_output, metric) if args.all_metrics else base_output
+        plot_bars(stats, metric, out)
+        print(f"Saved → {out}")
+
+    print(f"\nPer-bin stats:\n{stats[['bin_label', 'n', 'n_touch'] + _METRICS].to_string(index=False, float_format=lambda v: f'{v:.3f}')}")
 
     gs = global_stats(df.dropna(subset=["object_coverage"]))
     print(f"\nGlobal (coverage-annotated samples, n={gs['total']}): "

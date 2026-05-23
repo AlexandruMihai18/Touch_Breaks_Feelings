@@ -144,11 +144,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("csv", type=Path,
                         help="CSV with frame_id,video_id,...,label,prediction,x_touch,y_touch")
-    parser.add_argument("--metric", choices=["recall", "accuracy"], default="recall",
+    _METRICS = ["recall", "accuracy"]
+    parser.add_argument("--metric", choices=_METRICS, default="recall",
                         help="Metric label for the heatmap (default: recall). "
                              "x_touch/y_touch are only annotated for touch-positive samples, so "
                              "precision and F1 are not computable per zone — recall and accuracy "
                              "are equivalent here.")
+    parser.add_argument("--all-metrics", action="store_true",
+                        help=f"Generate one figure per metric {_METRICS}, each suffixed with the metric name. "
+                             "Overrides --metric.")
     parser.add_argument("--grid", type=int, default=8, metavar="N",
                         help="Grid dimension — must match what was used in annotate_touch_zones.py (default: 8)")
     parser.add_argument("--output", type=Path, default=None,
@@ -168,12 +172,15 @@ def main() -> None:
     if missing := required - set(df.columns):
         raise ValueError(f"CSV is missing columns: {missing}")
 
-    output = args.output or args.csv.with_name(args.csv.stem + "_heatmap.png")
-
+    base_output = args.output or args.csv.with_name(args.csv.stem + "_heatmap.png")
     recall, count = compute_zone_recall(df, args.grid)
-    metric_label = "Recall (hit rate)" if args.metric == "recall" else "Accuracy"
-    plot_heatmap(recall, count, metric_label, output)
-    print(f"Heatmap saved → {output}")
+
+    metrics = _METRICS if args.all_metrics else [args.metric]
+    for metric in metrics:
+        metric_label = "Recall (hit rate)" if metric == "recall" else "Accuracy"
+        out = plot_style.with_metric_suffix(base_output, metric) if args.all_metrics else base_output
+        plot_heatmap(recall, count, metric_label, out)
+        print(f"Heatmap saved → {out}")
 
     stats = global_stats(df)
     print(
