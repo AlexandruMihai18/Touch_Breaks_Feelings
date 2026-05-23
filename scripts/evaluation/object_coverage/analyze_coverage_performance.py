@@ -45,6 +45,8 @@ def compute_bin_stats(df: pd.DataFrame, n_bins: int) -> pd.DataFrame:
         y_true = group["label"].astype(int)
         y_pred = group["prediction"].astype(int)
         n      = len(group)
+        cm = confusion_matrix(y_true, y_pred, labels=[0, 1])
+        tn, fp, fn, tp = cm.ravel()
         rows.append({
             "bin_label":  f"{interval.left:.3f}–{interval.right:.3f}",
             "cov_mid":    (interval.left + interval.right) / 2,
@@ -52,6 +54,8 @@ def compute_bin_stats(df: pd.DataFrame, n_bins: int) -> pd.DataFrame:
             "n_touch":    int((y_true == 1).sum()),
             "accuracy":   accuracy_score(y_true, y_pred),
             "f1":         f1_score(y_true, y_pred, zero_division=0),
+            "recall":     tp / (tp + fn) if (tp + fn) > 0 else float("nan"),
+            "precision":  tp / (tp + fp) if (tp + fp) > 0 else float("nan"),
         })
 
     return pd.DataFrame(rows).sort_values("cov_mid")
@@ -134,8 +138,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("csv", type=Path)
     parser.add_argument("--n-bins", type=int,    default=5,        help="Number of quantile coverage bins (default: 5)")
-    parser.add_argument("--metric", choices=["f1", "accuracy"], default="f1",
-                        help="Metric to display per bin (default: f1)")
+    parser.add_argument("--metric", choices=["recall", "precision", "f1", "accuracy"],
+                        default="f1", help="Metric to display per bin (default: f1)")
     parser.add_argument("--output", type=Path,   default=None)
     parser.add_argument("--annotations", nargs="+", type=Path, required=True,
                         help="Annotation JSON file(s) providing object_coverage (required; not in prediction CSV)")
@@ -154,7 +158,8 @@ def main() -> None:
     stats  = compute_bin_stats(df, args.n_bins)
     plot_bars(stats, args.metric, output)
     print(f"Saved → {output}")
-    print(f"\nPer-bin {args.metric}:\n{stats[['bin_label', 'n', 'n_touch', args.metric]].to_string(index=False)}")
+    all_metrics = ["recall", "precision", "f1", "accuracy"]
+    print(f"\nPer-bin {args.metric}:\n{stats[['bin_label', 'n', 'n_touch'] + all_metrics].to_string(index=False, float_format=lambda v: f'{v:.3f}')}")
 
     gs = global_stats(df.dropna(subset=["object_coverage"]))
     print(f"\nGlobal (coverage-annotated samples, n={gs['total']}): "

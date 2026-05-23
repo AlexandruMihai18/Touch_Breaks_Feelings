@@ -126,8 +126,9 @@ def main() -> None:
     parser.add_argument("--n-bins", type=int, default=5,
                         help="Number of quantile depth bins (default: 5)")
     parser.add_argument("--metric", choices=["recall", "accuracy"], default="recall",
-                        help="Metric label shown on the figure (default: recall). "
-                             "Both are equivalent on touch-only samples; choose the label you prefer.")
+                        help="Metric label for the figure (default: recall). "
+                             "depth_touch is only annotated for touch-positive samples, so precision "
+                             "and F1 are not computable per bin — recall and accuracy are equivalent here.")
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument("--annotations", nargs="+", type=Path, required=True,
                         help="Annotation JSON file(s) providing depth_touch (required; not in prediction CSV)")
