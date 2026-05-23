@@ -15,6 +15,7 @@ Output layout:
 
     data/kubric_movi_a/
         frames/{video_id}/frame_000012.jpg
+        masks/{video_id}/frame_000012_depth.png
         masks/{video_id}/frame_000012_p0_object1.png
         masks/{video_id}/frame_000012_p0_object2.png
         masks/{video_id}/frame_000012_p0_touch.png
@@ -95,6 +96,29 @@ def _jsonable(value: Any) -> Any:
 
 def _binary_mask(mask: np.ndarray) -> Image.Image:
     return Image.fromarray((mask.astype(np.uint8) * 255), mode="L")
+
+
+def _depth_image(depth: np.ndarray) -> Image.Image:
+    depth = np.asarray(depth)
+    if depth.ndim == 3 and depth.shape[-1] == 1:
+        depth = depth[..., 0]
+    if depth.ndim != 2:
+        raise ValueError(f"Expected a 2D depth frame, got shape {depth.shape}")
+
+    if np.issubdtype(depth.dtype, np.integer):
+        depth_uint16 = np.clip(depth, 0, np.iinfo(np.uint16).max).astype(np.uint16)
+    else:
+        depth_float = np.nan_to_num(depth.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+        depth_float = np.maximum(depth_float, 0.0)
+        if depth_float.size and float(depth_float.max()) <= 1.0:
+            depth_uint16 = np.round(depth_float * np.iinfo(np.uint16).max).astype(np.uint16)
+        else:
+            depth_uint16 = np.clip(
+                np.round(depth_float * 1000.0),
+                0,
+                np.iinfo(np.uint16).max,
+            ).astype(np.uint16)
+    return Image.fromarray(depth_uint16, mode="I;16")
 
 
 def _touch_disk(
@@ -210,9 +234,21 @@ def _frame_path(video_frames_dir: Path, frame_idx: int) -> Path:
     return video_frames_dir / f"frame_{frame_idx:06d}.jpg"
 
 
+def _depth_path(video_masks_dir: Path, frame_idx: int) -> Path:
+    return video_masks_dir / f"frame_{frame_idx:06d}_depth.png"
+
+
 def _save_frame_if_needed(video: np.ndarray, frame_idx: int, frame_path: Path) -> None:
     if not frame_path.exists():
         Image.fromarray(video[frame_idx]).save(frame_path, quality=95)
+
+
+def _save_depth_if_needed(depths: np.ndarray | None, frame_idx: int, depth_path: Path) -> str | None:
+    if depths is None:
+        return None
+    if not depth_path.exists():
+        _depth_image(depths[frame_idx]).save(depth_path)
+    return str(depth_path.resolve())
 
 
 def _record_no_touch_candidate(
@@ -268,6 +304,8 @@ def convert(
     skipped_empty_masks = 0
     skipped_occluded_touches = 0
     skipped_bad_frame = 0
+    depth_frames_written: set[Path] = set()
+    videos_without_depth = 0
     no_touch_rows = 0
 
     iterator = tfds.as_numpy(ds)
@@ -283,6 +321,9 @@ def convert(
 
         video = sample["video"]
         segmentations = sample["segmentations"][..., 0]
+        depths = sample.get("depth")
+        if depths is None:
+            videos_without_depth += 1
         num_frames, height, width = video.shape[:3]
 
         video_frames_dir = frames_root / video_id
@@ -354,11 +395,15 @@ def convert(
             frame_stem = f"frame_{frame_idx:06d}"
             pair_stem = f"{frame_stem}_p{pair_idx}"
             frame_path = _frame_path(video_frames_dir, frame_idx)
+            depth_path = _depth_path(video_masks_dir, frame_idx)
             object1_path = video_masks_dir / f"{pair_stem}_object1.png"
             object2_path = video_masks_dir / f"{pair_stem}_object2.png"
             touch_path = video_masks_dir / f"{pair_stem}_touch.png"
 
             _save_frame_if_needed(video, frame_idx, frame_path)
+            depth_path_str = _save_depth_if_needed(depths, frame_idx, depth_path)
+            if depth_path_str is not None:
+                depth_frames_written.add(depth_path)
             _binary_mask(object1_mask_arr).save(object1_path)
             _binary_mask(object2_mask_arr).save(object2_path)
             _binary_mask(visible_touch_mask).save(touch_path)
@@ -374,6 +419,7 @@ def convert(
                     "object1_mask_path": str(object1_path.resolve()),
                     "object2_mask_path": str(object2_path.resolve()),
                     "target_path": str(touch_path.resolve()),
+                    **({"depth_path": depth_path_str} if depth_path_str is not None else {}),
                     "type": "touch",
                     "video_id": video_id,
                     "object_name": object_name,
@@ -398,7 +444,11 @@ def convert(
 
         for frame_idx, candidate in sorted(no_touch_candidates.items()):
             frame_path = _frame_path(video_frames_dir, frame_idx)
+            depth_path = _depth_path(video_masks_dir, frame_idx)
             _save_frame_if_needed(video, frame_idx, frame_path)
+            depth_path_str = _save_depth_if_needed(depths, frame_idx, depth_path)
+            if depth_path_str is not None:
+                depth_frames_written.add(depth_path)
             sources = sorted(candidate["sources"], key=lambda s: (s != "uniform", s))
             offsets = sorted(
                 candidate["hard_negative_offsets"],
@@ -407,6 +457,7 @@ def convert(
             entries.append(
                 {
                     "image_path": str(frame_path.resolve()),
+                    **({"depth_path": depth_path_str} if depth_path_str is not None else {}),
                     "type": "no-touch",
                     "video_id": video_id,
                     "object_name": "",
@@ -435,8 +486,11 @@ def convert(
     print(f"  no-touch rows: {no_touch_rows}")
     print(f"  frames:      {frames_root}")
     print(f"  masks:       {masks_root}")
+    print(f"  depth masks: {len(depth_frames_written)}")
     print(f"  annotations: {annotations_path}")
     print(f"  ctx index:   {ctx_index_path}")
+    if videos_without_depth:
+        print(f"  videos without depth field: {videos_without_depth}")
     if skipped_floor:
         print(f"  skipped floor/background collisions: {skipped_floor}")
     if skipped_empty_masks:
