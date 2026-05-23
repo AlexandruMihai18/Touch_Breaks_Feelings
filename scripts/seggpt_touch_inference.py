@@ -1,19 +1,20 @@
 """
 Evaluate the SegGPT + annotate_touch pipeline on Epic Kitchen or Greatest Hits.
 
-For each class in {split}_ctx_index.json:
+For each class in val_ctx_index.json:
   1. Pick one random context frame from the class.
   2. Build a 2-class prompt mask from the context ground truth: agent=1, object=2.
   3. Run SegGPT on every other frame in the class to predict agent/object masks.
   4. Run annotate_touch on the predicted masks to detect the touch region.
   5. Predict touch=1 if touch area > 0, else 0.
 
-Writes results/{dataset}_{split}_seggpt_touch_results.csv with binary metrics.
+Writes results/{dataset}_val_seggpt_touch_results.csv with binary metrics.
 """
 
 import argparse
 import csv
 import json
+import logging
 import random
 import sys
 from pathlib import Path
@@ -29,12 +30,10 @@ from touch_detection_alg.pipeline import annotate_touch
 
 _DATASETS = {
     "epic_kitchen": {
-        "anno_dir": _ROOT / "data" / "epic_kitchen" / "annotations",
         "ctx_key": "object_name",
         "agent_mask_key": "hand_mask_path",
     },
     "greatest_hits": {
-        "anno_dir": _ROOT / "data" / "greatest_hits" / "annotations",
         "ctx_key": "video_id",
         "agent_mask_key": "stick_mask_path",
     },
@@ -87,26 +86,31 @@ def _predict_masks(
 
 def run_inference(
     dataset: str,
-    split: str,
+    data_root: Path,
     seed: int,
     max_classes: int | None,
     dilation: int,
     abs_d_threshold: float,
     local_radius: int,
+    log: logging.Logger,
     num_jobs: int = 1,
     job_index: int = 0,
 ) -> list[dict]:
     cfg = _DATASETS[dataset]
-    anno_dir: Path = cfg["anno_dir"]
+    anno_dir: Path = data_root / dataset / "annotations"
     agent_key: str = cfg["agent_mask_key"]
 
-    with open(anno_dir / f"{split}.json") as f:
-        samples: list[dict] = json.load(f)
-    with open(anno_dir / f"{split}_ctx_index.json") as f:
-        ctx_index: dict[str, list[int]] = json.load(f)
+    with open(anno_dir / "val.json") as f:
+        val_samples: list[dict] = json.load(f)
+    with open(anno_dir / "val_ctx_index.json") as f:
+        val_ctx_index: dict[str, list[int]] = json.load(f)
+    with open(anno_dir / "train.json") as f:
+        train_samples: list[dict] = json.load(f)
+    with open(anno_dir / "train_ctx_index.json") as f:
+        train_ctx_index: dict[str, list[int]] = json.load(f)
 
     rng = random.Random(seed)
-    class_names = list(ctx_index.keys())
+    class_names = list(val_ctx_index.keys())
     if max_classes is not None:
         class_names = rng.sample(class_names, min(max_classes, len(class_names)))
 
@@ -115,39 +119,62 @@ def run_inference(
     class_names = class_names[job_index::num_jobs]
 
     shard_info = f" [job {job_index + 1}/{num_jobs}]" if num_jobs > 1 else ""
-    print(f"Running inference on {len(class_names)} classes{shard_info}", flush=True)
+    log.info("Running val inference on %d classes%s  seed=%d", len(class_names), shard_info, seed)
 
     results: list[dict] = []
     n_classes = len(class_names)
+    stats = {"train_ctx": 0, "val_ctx": 0, "skipped": 0}
 
     for cls_i, class_name in enumerate(class_names, 1):
-        class_samples = [samples[i] for i in ctx_index[class_name]]
-        if len(class_samples) < 2:
-            print(f"[{cls_i}/{n_classes}] {class_name!r}: skipped (only {len(class_samples)} sample)")
-            continue
+        val_class_samples = [val_samples[i] for i in val_ctx_index[class_name]]
 
-        ctx_idx = rng.randrange(len(class_samples))
-        ctx = class_samples[ctx_idx]
-        queries = [s for i, s in enumerate(class_samples) if i != ctx_idx]
+        # Prefer a context frame from the training distribution.
+        train_indices = train_ctx_index.get(class_name, [])
+        if train_indices:
+            train_class_samples = [train_samples[i] for i in train_indices]
+            ctx = rng.choice(train_class_samples)
+            queries = val_class_samples
+            ctx_source = f"train ({len(train_indices)} candidates)"
+            stats["train_ctx"] += 1
+        else:
+            # No train samples for this class — fall back to val.
+            # Skip if only one val sample to avoid using it as both context and query.
+            if len(val_class_samples) <= 1:
+                log.warning(
+                    "[%d/%d] %r: skipped — no train context, only %d val sample(s)",
+                    cls_i, n_classes, class_name, len(val_class_samples),
+                )
+                stats["skipped"] += 1
+                continue
+            ctx_idx = rng.randrange(len(val_class_samples))
+            ctx = val_class_samples[ctx_idx]
+            queries = [s for i, s in enumerate(val_class_samples) if i != ctx_idx]
+            ctx_source = f"val fallback ({len(val_class_samples)} val samples)"
+            stats["val_ctx"] += 1
 
         try:
             ctx_img = _load_rgb(ctx["image_path"])
             ctx_agent = _load_mask(ctx[agent_key])
             ctx_obj = _load_mask(ctx["object_mask_path"])
         except (FileNotFoundError, OSError) as exc:
-            print(f"[{cls_i}/{n_classes}] {class_name!r}: context load error — {exc}")
+            log.error("[%d/%d] %r: context load error — %s", cls_i, n_classes, class_name, exc)
+            stats["skipped"] += 1
             continue
 
         ctx_label_map = _make_label_map(ctx_agent, ctx_obj)
         ctx_pil = Image.fromarray(ctx_img)
 
-        print(f"[{cls_i}/{n_classes}] {class_name!r}: {len(queries)} query frames", flush=True)
+        log.info(
+            "[%d/%d] %r  ctx=%s  queries=%d  ctx_frame=%s",
+            cls_i, n_classes, class_name, ctx_source, len(queries),
+            Path(ctx["image_path"]).name,
+        )
 
         for q_i, qry in enumerate(queries, 1):
             try:
                 qry_img = _load_rgb(qry["image_path"])
             except (FileNotFoundError, OSError) as exc:
-                print(f"  [{q_i}/{len(queries)}] load error — {exc}")
+                log.warning("  [%d/%d] load error — %s", q_i, len(queries), exc)
                 continue
 
             pred_agent, pred_obj = _predict_masks(Image.fromarray(qry_img), ctx_pil, ctx_label_map)
@@ -186,12 +213,16 @@ def run_inference(
             })
 
             if q_i % 10 == 0 or q_i == len(queries):
-                print(f"  {q_i}/{len(queries)} done", flush=True)
+                log.info("  %d/%d done", q_i, len(queries))
 
+    log.info(
+        "Context sourcing — train: %d  val-fallback: %d  skipped: %d",
+        stats["train_ctx"], stats["val_ctx"], stats["skipped"],
+    )
     return results
 
 
-def _print_metrics(results: list[dict]) -> None:
+def _log_metrics(results: list[dict], log: logging.Logger) -> None:
     labels = [r["label"] for r in results]
     preds = [r["prediction"] for r in results]
     tp = sum(l == 1 and p == 1 for l, p in zip(labels, preds))
@@ -207,22 +238,25 @@ def _print_metrics(results: list[dict]) -> None:
     mean_iou = sum(iou_vals) / len(iou_vals) if iou_vals else None
 
     sep = "─" * 40
-    print(f"\n{sep}")
-    print(f"  Samples   : {n}")
-    print(f"  Accuracy  : {acc:.4f}")
-    print(f"  Precision : {prec:.4f}")
-    print(f"  Recall    : {rec:.4f}")
-    print(f"  F1        : {f1:.4f}")
+    log.info(sep)
+    log.info("  Samples   : %d", n)
+    log.info("  Accuracy  : %.4f", acc)
+    log.info("  Precision : %.4f", prec)
+    log.info("  Recall    : %.4f", rec)
+    log.info("  F1        : %.4f", f1)
     if mean_iou is not None:
-        print(f"  Mean IoU  : {mean_iou:.4f}  (n={len(iou_vals)})")
-    print(f"  TP={tp}  TN={tn}  FP={fp}  FN={fn}")
-    print(sep)
+        log.info("  Mean IoU  : %.4f  (n=%d)", mean_iou, len(iou_vals))
+    log.info("  TP=%d  TN=%d  FP=%d  FN=%d", tp, tn, fp, fn)
+    log.info(sep)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("dataset", choices=list(_DATASETS), help="Dataset to evaluate.")
-    parser.add_argument("--split", default="val", choices=["train", "val"])
+    parser.add_argument(
+        "--data-root", type=Path, default=_ROOT / "data",
+        help="Root directory under which dataset folders (epic_kitchen/, greatest_hits/) live.",
+    )
     parser.add_argument("--seed", type=int, default=42, help="RNG seed for context sampling.")
     parser.add_argument(
         "--max-classes", type=int, default=None, metavar="N",
@@ -243,20 +277,35 @@ def main() -> None:
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
+    stem = f"{args.dataset}_val_seggpt_touch_results"
+    suffix = f"_{args.job_index}" if args.num_jobs > 1 else ""
+
+    log_path = args.output_dir / f"{stem}{suffix}.log"
+    log = logging.getLogger("seggpt_inference")
+    log.setLevel(logging.DEBUG)
+    fmt = logging.Formatter("%(asctime)s  %(levelname)-7s  %(message)s", datefmt="%H:%M:%S")
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setFormatter(fmt)
+    fh = logging.FileHandler(log_path, mode="w")
+    fh.setFormatter(fmt)
+    log.addHandler(sh)
+    log.addHandler(fh)
+
+    log.info("dataset=%s  data_root=%s  seed=%d", args.dataset, args.data_root, args.seed)
+
     results = run_inference(
         dataset=args.dataset,
-        split=args.split,
+        data_root=args.data_root,
         seed=args.seed,
         max_classes=args.max_classes,
         dilation=args.dilation,
         abs_d_threshold=args.abs_d_threshold,
         local_radius=args.local_radius,
+        log=log,
         num_jobs=args.num_jobs,
         job_index=args.job_index,
     )
 
-    stem = f"{args.dataset}_{args.split}_seggpt_touch_results"
-    suffix = f"_{args.job_index}" if args.num_jobs > 1 else ""
     out_csv = args.output_dir / f"{stem}{suffix}.csv"
     with open(out_csv, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=_CSV_FIELDS)
@@ -264,9 +313,10 @@ def main() -> None:
         writer.writerows(results)
 
     shard_label = f" (shard {args.job_index + 1}/{args.num_jobs})" if args.num_jobs > 1 else ""
-    print(f"\nWrote {len(results)} rows → {out_csv}{shard_label}")
+    log.info("Wrote %d rows → %s%s", len(results), out_csv, shard_label)
+    log.info("Log saved → %s", log_path)
     if results:
-        _print_metrics(results)
+        _log_metrics(results, log)
 
 
 if __name__ == "__main__":

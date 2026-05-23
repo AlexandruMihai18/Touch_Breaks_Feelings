@@ -33,7 +33,7 @@ source activate touch_from_segmentation
 cd "$HOME/Touch_Breaks_Feelings"
 
 python scripts/seggpt_touch_inference.py greatest_hits \
-    --split val \
+    --data-root "/scratch-shared/$(whoami)" \
     --seed 42 \
     --dilation 10 \
     --abs-d-threshold 0.05 \
