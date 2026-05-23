@@ -135,6 +135,25 @@ def main() -> None:
     all_m = args.all_metrics
     results: dict[str, str] = {}
 
+    #  Save argparser output for reference
+    with open(out_dir / "args.txt", "w") as f:
+        f.write(" ".join(sys.argv) + "\n\n")
+        f.write(textwrap.dedent(f"""\
+            CSV: {args.csv}
+            Annotations: {', '.join(str(p) for p in args.annotations)}
+            Clusters: {args.clusters if args.clusters else 'None'}
+            Output dir: {out_dir}
+            Run name: {run_name}
+            N bins: {args.n_bins}
+            Grid size: {args.grid}
+            Depth metric: {args.depth_metric}
+            Zones metric: {args.zones_metric}
+            Coverage metric: {args.coverage_metric}
+            Object metric: {args.object_metric}
+            Skip steps: {', '.join(skipped) if skipped else 'None'}
+            All metrics flag: {all_m}
+        """))
+
     # ── 1. Depth ──────────────────────────────────────────────────────────────
     if "depth" not in skipped:
         out = out_dir / _OUTPUTS["depth"]
