@@ -6,7 +6,7 @@
 #SBATCH --job-name=ft_qwen
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --time=01:00:00
+#SBATCH --time=02:00:00
 #SBATCH --mem=128G
 #SBATCH --output=slurm_output_%A.out
 #SBATCH --mail-type=BEGIN,END,FAIL
