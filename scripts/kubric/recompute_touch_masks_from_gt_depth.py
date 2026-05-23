@@ -163,6 +163,10 @@ def _process_entry(entry: dict, args) -> tuple[str, int, int]:
         local_radius=args.local_radius,
     )
     new_pixels = int(np.count_nonzero(new_mask > 0))
+    if new_pixels == 0:
+        shutil.copy2(gt_path, target_path)
+        return "fallback_gt", old_pixels, new_pixels
+
     Image.fromarray(new_mask.astype(np.uint8)).save(target_path)
     return "written", old_pixels, new_pixels
 
@@ -192,6 +196,7 @@ def main():
 
         counts = {
             "written": 0,
+            "fallback_gt": 0,
             "would_write": 0,
             "skip": 0,
             "missing": 0,
@@ -208,12 +213,13 @@ def main():
             counts[status] = counts.get(status, 0) + 1
             old_pixel_total += old_pixels
             new_pixel_total += new_pixels
-            if status == "written" and new_pixels == 0:
+            if status == "fallback_gt":
                 empty_new_masks += 1
 
             if i % 100 == 0 or i == len(entries):
                 print(
                     f"  {i}/{len(entries)}  written={counts['written']}  "
+                    f"fallback={counts['fallback_gt']}  "
                     f"skip={counts['skip']}  missing={counts['missing']}  "
                     f"shape_err={counts['shape_error']}",
                     end="\r",
@@ -228,17 +234,18 @@ def main():
         print(
             "  "
             f"written={counts['written']}  "
+            f"fallback_gt={counts['fallback_gt']}  "
             f"would_write={counts['would_write']}  "
             f"skip={counts['skip']}  "
             f"missing={counts['missing']}  "
             f"shape_error={counts['shape_error']}  "
             f"non_touch={counts['non_touch']}"
         )
-        if counts["written"]:
+        if counts["written"] or counts["fallback_gt"]:
             print(
                 f"  old_touch_pixels={old_pixel_total:,}  "
                 f"new_touch_pixels={new_pixel_total:,}  "
-                f"empty_new_masks={empty_new_masks:,}"
+                f"empty_new_masks_fell_back_to_gt={empty_new_masks:,}"
             )
 
     if not any_found:
