@@ -44,7 +44,7 @@ _BINS = [
 ]
 
 # Viridis sampled at 4 evenly spaced points — colorblind-safe, print-friendly
-_BIN_COLORS = [plt.cm.viridis(v) for v in (0.10, 0.38, 0.65, 0.90)]
+_BIN_COLORS = [plt.cm.Pastel2(i) for i in range(4)]
 
 
 def compute_bin_stats(df: pd.DataFrame) -> pd.DataFrame:

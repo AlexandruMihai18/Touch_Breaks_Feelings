@@ -75,11 +75,11 @@ def plot_metric_bars(stats: pd.DataFrame, metric: str, output: Path) -> None:
     x = np.arange(len(clusters))
     n = len(clusters)
 
-    color = plot_style.METRIC_COLORS[metric]
+    colors = [plt.cm.Pastel2(i % 8) for i in range(n)]
     vals = stats[metric].fillna(0).values
 
     fig, ax = plt.subplots(figsize=(max(7.5, n * 1.3), 4.0))
-    ax.bar(x, vals, width=0.58, color=color, edgecolor="white", linewidth=0.6, zorder=3)
+    ax.bar(x, vals, width=0.58, color=colors, edgecolor="white", linewidth=0.6, zorder=3)
 
     for i, (_, row) in enumerate(stats.iterrows()):
         v = row[metric]
