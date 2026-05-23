@@ -38,11 +38,16 @@ def analyze(dataset: str, data_root: Path) -> None:
     train_classes = set(train_idx)
 
     has_train   = sorted(c for c in val_classes if c in train_classes)
+    num_has_train = sum(len(val_idx[c]) for c in has_train)
     no_train    = sorted(c for c in val_classes if c not in train_classes)
+    num_no_train = sum(len(val_idx[c]) for c in no_train)
     fallback_ok = [c for c in no_train if len(val_idx[c]) > 1]
+    num_fallback_ok = sum(len(val_idx[c]) for c in fallback_ok)
     will_skip   = [c for c in no_train if len(val_idx[c]) <= 1]
+    num_will_skip = sum(len(val_idx[c]) for c in will_skip)
 
     total = len(val_classes)
+    total_samples = sum(len(val_idx[c]) for c in val_classes)
     sep = "─" * 52
 
     print(f"\n{'═' * 52}")
@@ -51,9 +56,13 @@ def analyze(dataset: str, data_root: Path) -> None:
     print(f"  Val classes total          : {total}")
     print(f"  {sep}")
     print(f"  Train context available    : {len(has_train):>4}  ({100*len(has_train)/total:.1f}%)")
+    print(f"    ↳ train samples total    : {num_has_train:>4} ({100*num_has_train/total_samples:.1f}%)")
     print(f"  No train context           : {len(no_train):>4}  ({100*len(no_train)/total:.1f}%)")
-    print(f"    ↳ val fallback (>1 val)  : {len(fallback_ok):>4}")
-    print(f"    ↳ will be SKIPPED (≤1)  : {len(will_skip):>4}")
+    print(f"    ↳ val samples total      : {num_no_train:>4} ({100*num_no_train/total_samples:.1f}%)")
+    print(f"    ↳ val fallback (>1 val)  : {len(fallback_ok):>4} ({100*len(fallback_ok)/total:.1f}%)")
+    print(f"      ↳ val samples total    : {num_fallback_ok:>4} ({100*num_fallback_ok/total_samples:.1f}%)")
+    print(f"    ↳ will be SKIPPED (≤1)  : {len(will_skip):>4} ({100*len(will_skip)/total:.1f}%) ")
+    print(f"      ↳ val samples total    : {num_will_skip:>4} ({100*num_will_skip/total_samples:.1f}%)")
 
     if has_train:
         train_sizes = [len(train_idx[c]) for c in has_train]
