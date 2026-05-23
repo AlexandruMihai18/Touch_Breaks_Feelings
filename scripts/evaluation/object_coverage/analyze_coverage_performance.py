@@ -2,16 +2,20 @@
 
 Unlike the depth and zone analyses (which only have touch-positive samples per
 bin), object_coverage is available for ALL samples — so this script computes
-full F1 and accuracy per bin, not just recall.
+full metrics per bin.
 
-Reads a predictions CSV with a `object_coverage` column and bins samples by
-quantile, then renders a grouped bar chart of F1 and accuracy per bin.
+Coverage thresholds (nonzero pixels / total pixels):
+    < 0.02           → Small        (utensils, small produce: knife, spoon, carrot, egg)
+    0.02 – 0.07      → Medium-small (cookware, containers: bowl, pan, kettle, plate)
+    0.07 – 0.15      → Medium-large (boards, fixed appliances: chopping board, dishwasher)
+    ≥ 0.15           → Large        (surfaces: oven, hob, sink, fridge, cupboard)
 
 Usage
 -----
     python scripts/evaluation/object_coverage/analyze_coverage_performance.py \\
         results/predictions.csv \\
-        [--n-bins 5] [--metric f1|accuracy] [--output coverage_performance.png]
+        --annotations /path/to/annotations.json \\
+        [--metric f1] [--output coverage_performance.png]
 """
 
 from __future__ import annotations
@@ -31,25 +35,35 @@ from utils import enrich_df
 import plot_style
 
 
-def compute_bin_stats(df: pd.DataFrame, n_bins: int) -> pd.DataFrame:
+# Hard coverage thresholds derived from EPIC-Kitchens object_labels_coverage.txt
+_BINS = [
+    ("Small",         0.00,  0.02),
+    ("Medium-small",  0.02,  0.07),
+    ("Medium-large",  0.07,  0.15),
+    ("Large",         0.15,  1.01),
+]
+
+# Viridis sampled at 4 evenly spaced points — colorblind-safe, print-friendly
+_BIN_COLORS = [plt.cm.viridis(v) for v in (0.10, 0.38, 0.65, 0.90)]
+
+
+def compute_bin_stats(df: pd.DataFrame) -> pd.DataFrame:
     valid = df.dropna(subset=["object_coverage"]).copy()
     if len(valid) == 0:
         raise ValueError("No rows with object_coverage found in CSV.")
 
-    valid["bin"], bin_edges = pd.qcut(
-        valid["object_coverage"], q=n_bins, retbins=True, duplicates="drop"
-    )
-
     rows = []
-    for interval, group in valid.groupby("bin", observed=True):
+    for label, lo, hi in _BINS:
+        group = valid[(valid["object_coverage"] >= lo) & (valid["object_coverage"] < hi)]
+        if len(group) == 0:
+            continue
         y_true = group["label"].astype(int)
         y_pred = group["prediction"].astype(int)
-        n      = len(group)
+        n = len(group)
         cm = confusion_matrix(y_true, y_pred, labels=[0, 1])
         tn, fp, fn, tp = cm.ravel()
         rows.append({
-            "bin_label":  f"{interval.left:.3f}–{interval.right:.3f}",
-            "cov_mid":    (interval.left + interval.right) / 2,
+            "bin_label":  label,
             "n":          n,
             "n_touch":    int((y_true == 1).sum()),
             "accuracy":   accuracy_score(y_true, y_pred),
@@ -58,64 +72,51 @@ def compute_bin_stats(df: pd.DataFrame, n_bins: int) -> pd.DataFrame:
             "precision":  tp / (tp + fp) if (tp + fp) > 0 else float("nan"),
         })
 
-    return pd.DataFrame(rows).sort_values("cov_mid")
+    return pd.DataFrame(rows)
 
 
 def plot_bars(stats: pd.DataFrame, metric: str, output: Path) -> None:
     plot_style.apply()
 
     n = len(stats)
-    fig, ax = plt.subplots(figsize=(max(5.5, n * 1.1), 4.0))
+    colors = _BIN_COLORS[:n]
 
-    cmap = plt.cm.RdYlGn
-    norm = mpl.colors.Normalize(vmin=0, vmax=1)
+    fig, ax = plt.subplots(figsize=(3.5 + n * 0.9, 4.0))
+
     vals = stats[metric].values
-    colors = [cmap(norm(v)) for v in vals]
-
     ax.bar(
         range(n), vals,
         color=colors,
         edgecolor="white",
         linewidth=0.6,
-        width=0.58,
+        width=0.52,
         zorder=3,
     )
 
     for i, (_, row) in enumerate(stats.iterrows()):
-        ax.text(
-            i, row[metric] + 0.025,
-            f"{row[metric]:.2f}",
-            ha="center", va="bottom", fontsize=9, fontweight="semibold",
-            color=plot_style.DARK,
-        )
-        ax.text(
-            i, 0.03,
-            f"({row['n_touch']}/{row['n']})",
-            ha="center", va="bottom", fontsize=7.5, color="white",
-            fontweight="semibold", zorder=5,
-        )
+        v = row[metric]
+        if not np.isnan(v):
+            ax.text(
+                i, v + 0.025,
+                f"{v:.2f}",
+                ha="center", va="bottom", fontsize=11, fontweight="semibold",
+                color=plot_style.DARK,
+            )
 
-    mean_val = stats[metric].mean()
+    mean_val = np.nanmean(vals)
     ax.axhline(
-        mean_val, color=plot_style.DARK, linestyle="--", linewidth=1.0,
-        label=f"Mean {metric} = {mean_val:.2f}", zorder=4,
+        mean_val, color=plot_style.GRAY, linestyle="--", linewidth=1.0,
+        label=f"Mean = {mean_val:.2f}", zorder=4,
     )
 
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([])
-    cbar = fig.colorbar(sm, ax=ax, pad=0.01, fraction=0.03, aspect=25)
-    cbar.set_label(metric.capitalize(), fontsize=9)
-    cbar.ax.tick_params(labelsize=8)
-    cbar.outline.set_linewidth(0.5)
-
     ax.set_xticks(range(n))
-    ax.set_xticklabels(stats["bin_label"], rotation=30, ha="right", fontsize=9)
-    ax.set_xlabel("Object coverage bin  (foreground pixels / total pixels)", labelpad=8)
+    ax.set_xticklabels(stats["bin_label"], fontsize=11)
     ax.set_ylabel(metric.capitalize())
-    ax.set_ylim(0, 1.18)
+    ax.set_ylim(0, 1.15)
     ax.set_xlim(-0.55, n - 0.45)
-    ax.set_title(f"Touch-detection {metric.upper()} by object coverage bin\n(all samples — touch and no-touch)")
+    ax.set_title(f"{metric.upper()} by object size")
     ax.legend(loc="upper left", fontsize=9)
+    ax.set_xlabel("")
 
     plt.savefig(output)
     plt.close(fig)
@@ -135,10 +136,9 @@ def global_stats(df: pd.DataFrame) -> dict:
 
 
 def main() -> None:
+    _METRICS = ["recall", "precision", "f1", "accuracy"]
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("csv", type=Path)
-    _METRICS = ["recall", "precision", "f1", "accuracy"]
-    parser.add_argument("--n-bins", type=int, default=5, help="Number of quantile coverage bins (default: 5)")
     parser.add_argument("--metric", choices=_METRICS, default="f1",
                         help="Metric to display per bin (default: f1)")
     parser.add_argument("--all-metrics", action="store_true",
@@ -146,7 +146,7 @@ def main() -> None:
                              "Overrides --metric.")
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument("--annotations", nargs="+", type=Path, required=True,
-                        help="Annotation JSON file(s) providing object_coverage (required; not in prediction CSV)")
+                        help="Annotation JSON file(s) providing object_coverage")
     args = parser.parse_args()
 
     if not args.csv.exists():
@@ -159,7 +159,7 @@ def main() -> None:
         raise ValueError(f"CSV missing columns: {missing}")
 
     base_output = args.output or args.csv.with_name(args.csv.stem + "_coverage_perf.png")
-    stats = compute_bin_stats(df, args.n_bins)
+    stats = compute_bin_stats(df)
 
     metrics = _METRICS if args.all_metrics else [args.metric]
     for metric in metrics:

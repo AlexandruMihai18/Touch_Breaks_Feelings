@@ -95,26 +95,16 @@ def plot_cluster_bars(stats: pd.DataFrame, metric: str, output: Path) -> None:
             ax_top.text(i, v + 0.025, f"{v:.2f}",
                         ha="center", va="bottom", fontsize=8, fontweight="semibold",
                         color=plot_style.DARK)
-        ax_top.text(i, 0.03, f"({row['n']})",
-                    ha="center", va="bottom", fontsize=7.5, color="white",
-                    fontweight="semibold", zorder=5)
 
     mean_val = np.nanmean(vals)
-    ax_top.axhline(mean_val, color=plot_style.DARK, linestyle="--", linewidth=1.0,
-                   label=f"Mean {metric} = {mean_val:.2f}", zorder=4)
-
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([])
-    cbar = fig.colorbar(sm, ax=ax_top, pad=0.01, fraction=0.025, aspect=25)
-    cbar.set_label(metric.capitalize(), fontsize=9)
-    cbar.ax.tick_params(labelsize=8)
-    cbar.outline.set_linewidth(0.5)
+    ax_top.axhline(mean_val, color=plot_style.GRAY, linestyle="--", linewidth=1.0,
+                   label=f"Mean = {mean_val:.2f}", zorder=4)
 
     ax_top.set_xticks(x)
     ax_top.set_xticklabels(clusters, rotation=30, ha="right", fontsize=9)
     ax_top.set_ylim(0, 1.18)
     ax_top.set_ylabel(metric.capitalize())
-    ax_top.set_title(f"Touch-detection {metric} by object cluster")
+    ax_top.set_title(f"{metric.capitalize()} by object cluster")
     ax_top.legend(loc="upper left", fontsize=9)
     ax_top.set_xlim(-0.55, len(clusters) - 0.45)
 
@@ -131,16 +121,11 @@ def plot_cluster_bars(stats: pd.DataFrame, metric: str, output: Path) -> None:
     ax_bot.bar(x, fp_p, bottom=tp_p + tn_p,     width=bar_w, label="FP", color=plot_style.C_FP, zorder=3)
     ax_bot.bar(x, fn_p, bottom=tp_p + tn_p + fp_p, width=bar_w, label="FN", color=plot_style.C_FN, zorder=3)
 
-    for i, (_, row) in enumerate(stats.iterrows()):
-        ax_bot.text(i, -0.06, f"n={row['n']}", ha="center", va="top",
-                    fontsize=7.5, color=plot_style.GRAY,
-                    transform=ax_bot.get_xaxis_transform())
-
     ax_bot.set_xticks(x)
     ax_bot.set_xticklabels(clusters, rotation=30, ha="right", fontsize=9)
-    ax_bot.set_ylim(0, 1.18)
-    ax_bot.set_ylabel("Proportion of samples")
-    ax_bot.set_title("Confusion breakdown per cluster  (proportional)")
+    ax_bot.set_ylim(0, 1.05)
+    ax_bot.set_ylabel("Proportion")
+    ax_bot.set_title("Prediction breakdown by cluster")
     ax_bot.legend(loc="upper right", ncol=4)
     ax_bot.set_xlim(-0.6, len(clusters) - 0.4)
     ax_bot.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))

@@ -198,7 +198,6 @@ def main() -> None:
         ok = _run(
             [py, str(_SCRIPTS["coverage"]),
              str(args.csv),
-             "--n-bins", str(args.n_bins),
              *metric_args,
              "--output",  str(out),
              *ann_args],
