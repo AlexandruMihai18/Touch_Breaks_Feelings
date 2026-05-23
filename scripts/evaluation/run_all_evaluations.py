@@ -51,14 +51,28 @@ _OUTPUTS = {
 }
 
 
-def _run(cmd: list[str], step: str) -> bool:
-    """Run a subprocess command, print stdout/stderr live.  Returns True on success."""
-    print(f"\n{'─' * 60}")
-    print(f"  [{step.upper()}]  {' '.join(str(c) for c in cmd)}")
-    print(f"{'─' * 60}")
-    result = subprocess.run(cmd, check=False)
-    if result.returncode != 0:
-        print(f"  [WARN] {step} exited with code {result.returncode} — continuing.")
+def _tee(msg: str, log: list[str]) -> None:
+    print(msg)
+    log.append(msg)
+
+
+def _run(cmd: list[str], step: str, log: list[str]) -> bool:
+    """Run a subprocess command, printing and logging stdout/stderr live."""
+    _tee(f"\n{'─' * 60}", log)
+    _tee(f"  [{step.upper()}]  {' '.join(str(c) for c in cmd)}", log)
+    _tee(f"{'─' * 60}", log)
+
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, bufsize=1,
+    )
+    for line in proc.stdout:
+        _tee(line.rstrip(), log)
+    proc.wait()
+
+    if proc.returncode != 0:
+        _tee(f"  [WARN] {step} exited with code {proc.returncode} — continuing.", log)
         return False
     return True
 
@@ -117,9 +131,6 @@ def main() -> None:
 
     if not args.csv.exists():
         parser.error(f"CSV not found: {args.csv}")
-    for p in args.annotations:
-        if not p.exists():
-            print(f"[WARN] annotation file not found: {p}")
 
     # ── Create output directory ───────────────────────────────────────────────
     run_name = args.run_name or (
@@ -127,7 +138,14 @@ def main() -> None:
     )
     out_dir: Path = args.output_dir / run_name
     out_dir.mkdir(parents=True, exist_ok=True)
-    print(f"\nOutputs → {out_dir}\n")
+
+    log: list[str] = []
+
+    for p in args.annotations:
+        if not p.exists():
+            _tee(f"[WARN] annotation file not found: {p}", log)
+
+    _tee(f"\nOutputs → {out_dir}\n", log)
 
     py = sys.executable
     ann_args = [a for p in args.annotations for a in ("--annotations", str(p))]
@@ -164,7 +182,7 @@ def main() -> None:
              *metric_args,
              "--output", str(out),
              *ann_args],
-            "depth",
+            "depth", log,
         )
         results["depth"] = str(out_dir / "depth_performance_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
     else:
@@ -173,7 +191,7 @@ def main() -> None:
     # ── 2. Object clusters ────────────────────────────────────────────────────
     if "object" not in skipped:
         if args.clusters is None or not args.clusters.exists():
-            print("\n[SKIP] object eval — --clusters not provided or file not found.")
+            _tee("\n[SKIP] object eval — --clusters not provided or file not found.", log)
             results["object"] = "SKIPPED (no --clusters)"
         else:
             out = out_dir / _OUTPUTS["object"]
@@ -185,7 +203,7 @@ def main() -> None:
                  *metric_args,
                  "--output",   str(out),
                  *ann_args],
-                "object",
+                "object", log,
             )
             results["object"] = str(out_dir / "object_performance_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
     else:
@@ -201,7 +219,7 @@ def main() -> None:
              *metric_args,
              "--output",  str(out),
              *ann_args],
-            "coverage",
+            "coverage", log,
         )
         results["coverage"] = str(out_dir / "coverage_performance_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
     else:
@@ -218,20 +236,25 @@ def main() -> None:
              *metric_args,
              "--output", str(out),
              *ann_args],
-            "zones",
+            "zones", log,
         )
         results["zones"] = str(out_dir / "grid_heatmap_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
     else:
         results["zones"] = "SKIPPED"
 
     # ── Summary ───────────────────────────────────────────────────────────────
-    print(f"\n{'═' * 60}")
-    print(f"  Evaluation complete — run: {run_name}")
-    print(f"{'═' * 60}")
+    _tee(f"\n{'═' * 60}", log)
+    _tee(f"  Evaluation complete — run: {run_name}", log)
+    _tee(f"{'═' * 60}", log)
     for step, path in results.items():
         tag = "✓" if path not in ("FAILED", "SKIPPED") and not path.startswith("SKIPPED") else "–"
-        print(f"  {tag}  {step:<12}  {path}")
-    print(f"\n  All outputs in: {out_dir}\n")
+        _tee(f"  {tag}  {step:<12}  {path}", log)
+    _tee(f"\n  All outputs in: {out_dir}\n", log)
+
+    # ── Write log ─────────────────────────────────────────────────────────────
+    log_path = out_dir / "evaluation_log.txt"
+    log_path.write_text("\n".join(log) + "\n")
+    print(f"  Log → {log_path}")
 
 
 if __name__ == "__main__":
