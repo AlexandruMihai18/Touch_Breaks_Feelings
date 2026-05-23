@@ -157,7 +157,9 @@ def main() -> None:
 
     print(f"\nPer-bin stats:\n{stats[['bin_label', 'n', 'recall']].to_string(index=False)}")
 
+    print(f"\nGlobal stats (all samples, n={len(df)}):")
     touch = df.dropna(subset=["depth_touch"])
+    print(f"\nGlobal stats (depth-annotated samples, n={len(touch)}):")
     if len(touch) > 0:
         gs = global_stats(touch)
         print(f"\nGlobal (depth-annotated samples, n={gs['total']}): "
