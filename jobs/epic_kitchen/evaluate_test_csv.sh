@@ -25,13 +25,14 @@ source activate touch_from_segmentation
 cd "$HOME/Touch_Breaks_Feelings"
 
 CSV=results/test/epic_kitchen_val_seggpt_touch_results.csv
-ANNOTATIONS=/scratch-shared/dotero/epic_kitchen/annotations/val.json
-LABELS=data/epic_kitchen/object_labels.txt
+EK_ROOT="/scratch-shared/$(whoami)/epic_kitchen"
+ANNOTATIONS="${EK_ROOT}/annotations/val.json"
+LABELS="${EK_ROOT}/object_labels.txt"
 
 # Build object cluster mappings from hand-crafted rule JSONs
 python scripts/evaluation/cluster_object_classes.py \
     "$LABELS" \
-    --output-dir data/epic_kitchen/
+    --output-dir "${EK_ROOT}/"
 
 python scripts/evaluation/depth/analyze_depth_performance.py \
     "$CSV" \
@@ -50,12 +51,12 @@ python scripts/evaluation/touch_zones/analyze_grid_performance.py \
 
 python scripts/evaluation/object_classes/analyze_object_performance.py \
     "$CSV" \
-    --clusters data/epic_kitchen/object_clusters_7.json \
+    --clusters "${EK_ROOT}/object_clusters_7.json" \
     --annotations "$ANNOTATIONS" \
     --output results/test/eval_object_perf_7.png
 
 python scripts/evaluation/object_classes/analyze_object_performance.py \
     "$CSV" \
-    --clusters data/epic_kitchen/object_clusters_gh.json \
+    --clusters "${EK_ROOT}/object_clusters_gh.json" \
     --annotations "$ANNOTATIONS" \
     --output results/test/eval_object_perf_gh.png
