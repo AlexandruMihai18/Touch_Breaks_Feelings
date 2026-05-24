@@ -152,7 +152,7 @@ def _resolve_mask_paths(
         obj   = _p("object2_mask_path")
         # No-touch entries have no object masks on disk; overlay will just
         # show the plain frame for FP failures, which is expected.
-        touch = _p("touch_gt_path") if is_touch else None
+        touch = _p("target_path") if is_touch else None
 
     else:  # greatest_hits
         agent = _p("stick_mask_path")

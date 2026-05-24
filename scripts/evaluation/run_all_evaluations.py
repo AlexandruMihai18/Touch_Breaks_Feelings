@@ -14,10 +14,11 @@ Usage
 
 Skipped analyses
 ----------------
-  * depth    — requires depth_touch field in the annotation JSONs
-  * object   — requires --clusters and object_name field in the annotation JSONs
-  * coverage — requires object_coverage field in the annotation JSONs
-  * zones    — requires x_touch / y_touch fields in the annotation JSONs
+  * depth       — requires depth_touch field in the annotation JSONs
+  * object      — requires --clusters and object_name field in the annotation JSONs
+  * coverage    — requires object_coverage field in the annotation JSONs
+  * zones       — requires x_touch / y_touch fields in the annotation JSONs
+  * point_zones — auto-skipped when CSV has no predicted x_touch / y_touch coords
 
 Each step prints "[SKIP] ..." if the required data is absent; other steps
 continue normally.
@@ -37,18 +38,20 @@ _REPO = Path(__file__).resolve().parents[2]
 _EVAL = Path(__file__).parent
 
 _SCRIPTS = {
-    "depth":    _EVAL / "depth"             / "analyze_depth_performance.py",
-    "object":   _EVAL / "object_classes"    / "analyze_class_performance.py",
-    "coverage": _EVAL / "object_coverage"   / "analyze_coverage_performance.py",
-    "zones":    _EVAL / "touch_zones"       / "analyze_grid_performance.py",
-    "failures": _EVAL / "failure_sampling"  / "sample_failures.py",
+    "depth":       _EVAL / "depth"             / "analyze_depth_performance.py",
+    "object":      _EVAL / "object_classes"    / "analyze_class_performance.py",
+    "coverage":    _EVAL / "object_coverage"   / "analyze_coverage_performance.py",
+    "zones":       _EVAL / "touch_zones"       / "analyze_grid_performance.py",
+    "point_zones": _EVAL / "touch_zones"       / "analyze_point_performance.py",
+    "failures":    _EVAL / "failure_sampling"  / "sample_failures.py",
 }
 
 _OUTPUTS = {
-    "depth":    "depth_performance.png",
-    "object":   "object_performance.png",
-    "coverage": "coverage_performance.png",
-    "zones":    "grid_heatmap.png",
+    "depth":       "depth_performance.png",
+    "object":      "object_performance.png",
+    "coverage":    "coverage_performance.png",
+    "zones":       "grid_heatmap.png",
+    "point_zones": "point_heatmap",
 }
 
 
@@ -123,7 +126,7 @@ def main() -> None:
     parser.add_argument("--skip", nargs="*",
                         choices=list(_SCRIPTS), default=[],
                         metavar="STEP",
-                        help="Steps to skip: depth object coverage zones failures")
+                        help="Steps to skip: depth object coverage zones point_zones failures")
     parser.add_argument("--all-metrics", action="store_true",
                         help="Pass --all-metrics to every analysis script: generates one figure per "
                              "metric with a _<metric> suffix. Per-script --*-metric flags are ignored.")
@@ -258,7 +261,31 @@ def main() -> None:
     else:
         results["zones"] = "SKIPPED"
 
-    # ── 5. Failure sampling ───────────────────────────────────────────────────
+    # ── 5. Touch-point regression zones ──────────────────────────────────────
+    if "point_zones" not in skipped:
+        import pandas as pd
+        _x = pd.to_numeric(
+            pd.read_csv(args.csv, usecols=["x_touch"])["x_touch"],
+            errors="coerce",
+        )
+        if not _x.notna().any():
+            _tee("\n[SKIP] point_zones — no predicted x_touch/y_touch coords in CSV", log)
+            results["point_zones"] = "SKIPPED (no point predictions)"
+        else:
+            out = out_dir / _OUTPUTS["point_zones"]
+            ok = _run(
+                [py, str(_SCRIPTS["point_zones"]),
+                 str(args.csv),
+                 "--grid",   str(args.grid),
+                 "--output", str(out),
+                 *ann_args],
+                "point_zones", log,
+            )
+            results["point_zones"] = str(out.with_name(out.name + "_hit_rate.png")) if ok else "FAILED"
+    else:
+        results["point_zones"] = "SKIPPED"
+
+    # ── 6. Failure sampling ───────────────────────────────────────────────────
     if "failures" not in skipped:
         dataset_args = ["--dataset", args.dataset] if args.dataset else []
         ok = _run(
