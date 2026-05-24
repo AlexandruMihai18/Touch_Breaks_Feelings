@@ -6,6 +6,8 @@ looks up a context frame from the ctx_index, runs SegGPT inference on each
 sample, and saves inferred masks alongside the originals.
 
 Output added to each bin directory:
+  sample_N_ctx.jpg         — raw context frame used for inference
+  sample_N_ctx_masks.jpg   — context frame with GT agent/object/touch masks overlaid
   sample_N_agent_mask.png  — inferred agent/hand mask
   sample_N_object_mask.png — inferred object mask
   sample_N_touch_mask.png  — inferred touch mask
@@ -213,6 +215,19 @@ def process_bin(
             continue
 
         ctx_label_map = _make_label_map(ctx_mask1, ctx_mask2)
+
+        ctx_touch_mask = annotate_touch(
+            ctx_img, ctx_mask1, ctx_mask2,
+            dilation=dilation,
+            abs_d_threshold=abs_d_threshold,
+            local_radius=local_radius,
+        )
+        _save_jpg(ctx_img, bin_dir / f"{sample_stem}_ctx.jpg")
+        _save_jpg(
+            draw_dual_mask_viz(ctx_img, ctx_mask1, ctx_mask2, ctx_touch_mask, [], []),
+            bin_dir / f"{sample_stem}_ctx_masks.jpg",
+        )
+
         pred = run_seggpt(
             Image.fromarray(qry_img),
             Image.fromarray(ctx_img),
