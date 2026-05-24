@@ -77,6 +77,9 @@ def main() -> None:
                         help="Directory containing object_clusters_7.json and "
                              "object_clusters_gh.json (default: <data_root>/epic_kitchen/). "
                              "Object-class annotation is skipped if the files are not found.")
+    parser.add_argument("--splits", nargs="+", default=["train.json", "val.json"],
+                        metavar="SPLIT",
+                        help="JSON files to process (default: train.json val.json)")
     parser.add_argument("--force", action="store_true",
                         help="Re-compute even if fields already set")
     parser.add_argument("--dry-run", action="store_true",
@@ -112,7 +115,7 @@ def main() -> None:
         elif ds_key == "kubric":
             print("  [SKIP] object-class annotation — not applicable to Kubric")
 
-        for split in SPLITS:
+        for split in args.splits:
             path = ds_dir / split
             if not path.exists():
                 print(f"  [SKIP] not found: {path}")
