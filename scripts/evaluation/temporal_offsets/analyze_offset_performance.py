@@ -16,7 +16,8 @@ Use --metric f1 to plot binary F1 per offset bin instead.
 Usage
 -----
     python scripts/evaluation/temporal_offsets/analyze_offset_performance.py \\
-        --csv results/predictions.csv \\
+        --csv results/model_a.csv results/model_b.csv \\
+        --run-names model_a model_b \\
         --datasets gh ek kubric \\
         --data-root /gpfs/scratch1/shared/dotero \\
         --split val \\
@@ -37,6 +38,7 @@ from pathlib import Path
 from typing import Iterable
 
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import plot_style
@@ -281,6 +283,7 @@ def _analysis_df(
     rows: Iterable[OffsetRow],
     primary: dict[tuple[str, str, int], int],
     fallback: dict[tuple[str, int], int],
+    run_name: str,
 ) -> list[dict]:
     records = []
     matched = unmatched = 0
@@ -292,6 +295,7 @@ def _analysis_df(
         matched += 1
         records.append(
             {
+                "run": run_name,
                 "dataset": row.dataset,
                 "offset_steps": row.offset_steps,
                 "offset_abs": abs(row.offset_steps),
@@ -304,19 +308,19 @@ def _analysis_df(
     return records
 
 
-def _signed_stats(records: list[dict], dataset: str, max_offset: int) -> list[dict]:
+def _signed_stats(records: list[dict], dataset: str, run_name: str, max_offset: int) -> list[dict]:
     rows = []
     for offset in range(-max_offset, max_offset + 1):
         group = [r for r in records if r["offset_steps"] == offset]
-        rows.append(_metric_row(dataset, offset, abs(offset), group))
+        rows.append(_metric_row(dataset, run_name, offset, abs(offset), group))
     return rows
 
 
-def _absolute_stats(records: list[dict], dataset: str, max_offset: int) -> list[dict]:
+def _absolute_stats(records: list[dict], dataset: str, run_name: str, max_offset: int) -> list[dict]:
     rows = []
     for offset_abs in range(0, max_offset + 1):
         group = [r for r in records if r["offset_abs"] == offset_abs]
-        rows.append(_metric_row(dataset, offset_abs, offset_abs, group))
+        rows.append(_metric_row(dataset, run_name, offset_abs, offset_abs, group))
     return rows
 
 
@@ -342,10 +346,11 @@ def _binary_metrics(group: list[dict]) -> dict[str, float]:
     }
 
 
-def _metric_row(dataset: str, offset_steps: int, offset_abs: int, group: list[dict]) -> dict:
+def _metric_row(dataset: str, run_name: str, offset_steps: int, offset_abs: int, group: list[dict]) -> dict:
     n = len(group)
     errors = sum(int(r["error"]) for r in group) if n else 0
     return {
+        "run": run_name,
         "dataset": dataset,
         "offset_steps": offset_steps,
         "offset_abs": offset_abs,
@@ -357,32 +362,26 @@ def _metric_row(dataset: str, offset_steps: int, offset_abs: int, group: list[di
     }
 
 
-def _plot_bars(stats: list[dict], title: str, xlabel: str, metric: str, output: Path) -> None:
+def _plot_lines(stats_by_run: dict[str, list[dict]], title: str, xlabel: str, metric: str, output: Path) -> None:
     plot_style.apply()
-    x = list(range(len(stats)))
-    values = [float(row[metric]) for row in stats]
-    if metric == "error":
-        colors = [plot_style.C_FN if row["metric_type"] == "fn_rate" else plot_style.C_FP for row in stats]
-    else:
-        colors = plot_style.recall_colors([0 if math.isnan(v) else v for v in values])
-    labels = [f"{int(row['offset_steps']):+d}" if xlabel == "Signed offset steps" else str(int(row["offset_steps"])) for row in stats]
+    first_stats = next(iter(stats_by_run.values()))
+    labels = [f"{int(row['offset_steps']):+d}" if xlabel == "Signed offset steps" else str(int(row["offset_steps"])) for row in first_stats]
+    x = list(range(len(first_stats)))
 
-    fig, ax = plt.subplots(figsize=(max(5.0, len(stats) * 0.55), 3.8))
-    heights = [0 if math.isnan(v) else v for v in values]
-    ax.bar(x, heights, color=colors, edgecolor="white", linewidth=0.6, width=0.62, zorder=3)
-
-    for i, row in enumerate(stats):
-        if row["n"] == 0 or math.isnan(float(row[metric])):
-            ax.text(i, 0.025, "n=0", ha="center", va="bottom", fontsize=8, color=plot_style.GRAY)
-            continue
-        ax.text(
-            i,
-            min(float(row[metric]) + 0.03, 1.07),
-            f"{float(row[metric]):.2f}\nn={int(row['n'])}",
-            ha="center",
-            va="bottom",
-            fontsize=8,
-            color=plot_style.DARK,
+    fig, ax = plt.subplots(figsize=(max(5.6, len(first_stats) * 0.7), 4.1))
+    colors = plt.cm.tab10.colors
+    for i, (run_name, stats) in enumerate(stats_by_run.items()):
+        values = [math.nan if row["n"] == 0 else float(row[metric]) for row in stats]
+        y = [math.nan if math.isnan(v) else v for v in values]
+        ax.plot(
+            x,
+            y,
+            marker="o",
+            linewidth=1.9,
+            markersize=4.5,
+            color=colors[i % len(colors)],
+            label=run_name,
+            zorder=3,
         )
 
     ax.set_xticks(x)
@@ -392,6 +391,18 @@ def _plot_bars(stats: list[dict], title: str, xlabel: str, metric: str, output: 
     ax.set_ylim(0, 1.15)
     ax.set_title(title)
     ax.grid(axis="y", zorder=0)
+
+    handles, labels_legend = ax.get_legend_handles_labels()
+    if metric == "error":
+        handles.extend([
+            Line2D([], [], linestyle="none", label="offset 0: false negative rate"),
+            Line2D([], [], linestyle="none", label="nonzero offsets: false positive rate"),
+        ])
+    else:
+        handles.append(Line2D([], [], linestyle="none", label=f"metric: {_metric_title(metric)} per offset bin"))
+    labels_legend = [h.get_label() for h in handles]
+    ax.legend(handles, labels_legend, loc="upper left", bbox_to_anchor=(1.01, 1.0), borderaxespad=0.0)
+
     output.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(output)
     plt.close(fig)
@@ -400,6 +411,7 @@ def _plot_bars(stats: list[dict], title: str, xlabel: str, metric: str, output: 
 
 def _write_stats_csv(path: Path, rows: list[dict]) -> None:
     fieldnames = [
+        "run",
         "dataset",
         "offset_steps",
         "offset_abs",
@@ -419,10 +431,17 @@ def _write_stats_csv(path: Path, rows: list[dict]) -> None:
         writer.writerows(rows)
 
 
-def _write_dataset_outputs(records: list[dict], dataset: str, output_dir: Path, max_offset: int, metric: str) -> None:
+def _write_dataset_outputs(records_by_run: dict[str, list[dict]], dataset: str, output_dir: Path, max_offset: int, metric: str) -> None:
     label = DATASET_LABELS.get(dataset, dataset)
-    signed = _signed_stats(records, dataset, max_offset)
-    absolute = _absolute_stats(records, dataset, max_offset)
+    signed_by_run = {
+        run_name: _signed_stats(records, dataset, run_name, max_offset)
+        for run_name, records in records_by_run.items()
+    }
+    absolute_by_run = {
+        run_name: _absolute_stats(records, dataset, run_name, max_offset)
+        for run_name, records in records_by_run.items()
+    }
+    signed = [row for rows in signed_by_run.values() for row in rows]
     suffix = "errors" if metric == "error" else metric
 
     stats_path = output_dir / f"{dataset}_offset_stats.csv"
@@ -430,15 +449,15 @@ def _write_dataset_outputs(records: list[dict], dataset: str, output_dir: Path, 
     _write_stats_csv(stats_path, signed)
     print(f"Saved -> {stats_path}")
 
-    _plot_bars(
-        signed,
+    _plot_lines(
+        signed_by_run,
         f"{label}: {_metric_title(metric)} by signed temporal offset",
         "Signed offset steps",
         metric,
         output_dir / f"{dataset}_signed_offset_{suffix}.png",
     )
-    _plot_bars(
-        absolute,
+    _plot_lines(
+        absolute_by_run,
         f"{label}: {_metric_title(metric)} by absolute temporal offset",
         "Absolute offset steps",
         metric,
@@ -452,7 +471,9 @@ def _metric_title(metric: str) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--csv", type=Path, required=True, help="Predictions CSV with label, prediction, frame_path")
+    parser.add_argument("--csv", nargs="+", type=Path, required=True, help="Prediction CSV(s) with label, prediction, frame_path")
+    parser.add_argument("--run-names", nargs="+", default=None,
+                        help="Optional display names for CSVs. Must match --csv length.")
     parser.add_argument("--datasets", nargs="+", choices=list(DATASET_SUBDIRS), default=list(DATASET_SUBDIRS))
     parser.add_argument("--data-root", type=Path, default=Path(__file__).resolve().parents[3] / "data")
     parser.add_argument("--split", default="val", choices=["train", "val"])
@@ -466,16 +487,22 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if not args.csv.exists():
-        raise FileNotFoundError(args.csv)
+    for path in args.csv:
+        if not path.exists():
+            raise FileNotFoundError(path)
+    if args.run_names is not None and len(args.run_names) != len(args.csv):
+        raise ValueError("--run-names must have the same number of values as --csv")
+    run_names = args.run_names or [path.stem for path in args.csv]
 
-    pred_rows = _load_predictions(args.csv)
+    lookups = []
     required = {"label", "prediction", "frame_path"}
-    columns = set(pred_rows[0]) if pred_rows else set()
-    if missing := required - columns:
-        raise ValueError(f"CSV missing columns: {missing}")
-
-    primary, fallback = _prediction_lookup(pred_rows)
+    for run_name, path in zip(run_names, args.csv):
+        pred_rows = _load_predictions(path)
+        columns = set(pred_rows[0]) if pred_rows else set()
+        if missing := required - columns:
+            raise ValueError(f"{path} missing columns: {missing}")
+        primary, fallback = _prediction_lookup(pred_rows)
+        lookups.append((run_name, primary, fallback))
 
     for dataset in args.datasets:
         anno_dir = args.data_root / DATASET_SUBDIRS[dataset]
@@ -484,17 +511,18 @@ def main() -> None:
             print(f"[SKIP] {dataset}: no offset annotation rows found in {anno_dir}")
             continue
 
-        records = _analysis_df(rows, primary, fallback)
-        if not records:
-            print(f"[SKIP] {dataset}: no offset rows matched predictions")
+        records_by_run: dict[str, list[dict]] = {}
+        for run_name, primary, fallback in lookups:
+            records = _analysis_df(rows, primary, fallback, run_name)
+            records = [r for r in records if r["offset_abs"] <= args.max_offset]
+            if records:
+                records_by_run[run_name] = records
+
+        if not records_by_run:
+            print(f"[SKIP] {dataset}: no offset rows matched any prediction CSV")
             continue
 
-        records = [r for r in records if r["offset_abs"] <= args.max_offset]
-        if not records:
-            print(f"[SKIP] {dataset}: no matched rows within max offset {args.max_offset}")
-            continue
-
-        _write_dataset_outputs(records, dataset, args.output_dir, args.max_offset, args.metric)
+        _write_dataset_outputs(records_by_run, dataset, args.output_dir, args.max_offset, args.metric)
 
 
 if __name__ == "__main__":
