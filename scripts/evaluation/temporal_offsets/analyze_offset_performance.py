@@ -12,6 +12,8 @@ By default, the plotted metric is class-specific:
   * nonzero offsets: false positive rate on no-touch context frames
 
 Use --metric f1 to plot binary F1 per offset bin instead.
+Use --distance-bins or --balanced-bins to additionally plot absolute-distance
+groups such as 1-4,5-10,11-20.
 
 Usage
 -----
@@ -22,6 +24,7 @@ Usage
         --data-root /gpfs/scratch1/shared/dotero \\
         --split val \\
         --metric error \\
+        --distance-bins 1-4,5-10,11-20 \\
         --output-dir results/evaluation/temporal_offsets
 """
 
@@ -57,6 +60,7 @@ DATASET_LABELS = {
 }
 
 METRICS = ["error", "accuracy", "precision", "recall", "f1"]
+DEFAULT_DISTANCE_BINS = "1-4,5-10,11-20"
 
 _FRAME_NUM_RE = re.compile(r"(?:frame_)?(\d+)(?:\.[^.]+)?$")
 
@@ -130,7 +134,7 @@ def _touch_offsets_from_main(dataset: str, entries: list[dict]) -> list[OffsetRo
     return rows
 
 
-def _infer_offsets_from_main(dataset: str, entries: list[dict], max_offset: int) -> list[OffsetRow]:
+def _infer_offsets_from_main(dataset: str, entries: list[dict], max_offset: int | None) -> list[OffsetRow]:
     rows = _touch_offsets_from_main(dataset, entries)
     by_video: dict[str, list[tuple[int, dict]]] = {}
     for entry in entries:
@@ -151,7 +155,7 @@ def _infer_offsets_from_main(dataset: str, entries: list[dict], max_offset: int)
                 continue
             nearest = min(touch_positions, key=lambda pos: abs(i - pos))
             offset = i - nearest
-            if offset == 0 or abs(offset) > max_offset:
+            if offset == 0 or (max_offset is not None and abs(offset) > max_offset):
                 continue
             rows.append(_offset_row(dataset, entry, label=0, offset_steps=offset))
             inferred += 1
@@ -160,7 +164,7 @@ def _infer_offsets_from_main(dataset: str, entries: list[dict], max_offset: int)
     return rows
 
 
-def _load_standard_offsets(dataset: str, anno_dir: Path, split: str, max_offset: int) -> list[OffsetRow]:
+def _load_standard_offsets(dataset: str, anno_dir: Path, split: str, max_offset: int | None) -> list[OffsetRow]:
     entries = _read_json(anno_dir / f"{split}.json")
     rows = _touch_offsets_from_main(dataset, entries)
 
@@ -213,7 +217,7 @@ def _load_kubric_offsets(dataset: str, anno_dir: Path, split: str) -> list[Offse
     return rows
 
 
-def _load_offsets(dataset: str, anno_dir: Path, split: str, max_offset: int) -> list[OffsetRow]:
+def _load_offsets(dataset: str, anno_dir: Path, split: str, max_offset: int | None) -> list[OffsetRow]:
     if dataset == "kubric":
         return _load_kubric_offsets(dataset, anno_dir, split)
     return _load_standard_offsets(dataset, anno_dir, split, max_offset)
@@ -324,6 +328,18 @@ def _absolute_stats(records: list[dict], dataset: str, run_name: str, max_offset
     return rows
 
 
+def _binned_stats(records: list[dict], dataset: str, run_name: str, bins: list[tuple[int, int, str]]) -> list[dict]:
+    rows = []
+    for lo, hi, label in bins:
+        group = [r for r in records if lo <= r["offset_abs"] <= hi]
+        row = _metric_row(dataset, run_name, lo, lo, group)
+        row["bin_label"] = label
+        row["bin_lo"] = lo
+        row["bin_hi"] = hi
+        rows.append(row)
+    return rows
+
+
 def _binary_metrics(group: list[dict]) -> dict[str, float]:
     n = len(group)
     if n == 0:
@@ -365,7 +381,10 @@ def _metric_row(dataset: str, run_name: str, offset_steps: int, offset_abs: int,
 def _plot_lines(stats_by_run: dict[str, list[dict]], title: str, xlabel: str, metric: str, output: Path) -> None:
     plot_style.apply()
     first_stats = next(iter(stats_by_run.values()))
-    labels = [f"{int(row['offset_steps']):+d}" if xlabel == "Signed offset steps" else str(int(row["offset_steps"])) for row in first_stats]
+    if first_stats and "bin_label" in first_stats[0]:
+        labels = [str(row["bin_label"]) for row in first_stats]
+    else:
+        labels = [f"{int(row['offset_steps']):+d}" if xlabel == "Signed offset steps" else str(int(row["offset_steps"])) for row in first_stats]
     x = list(range(len(first_stats)))
 
     fig, ax = plt.subplots(figsize=(max(5.6, len(first_stats) * 0.7), 4.1))
@@ -413,6 +432,9 @@ def _write_stats_csv(path: Path, rows: list[dict]) -> None:
     fieldnames = [
         "run",
         "dataset",
+        "bin_label",
+        "bin_lo",
+        "bin_hi",
         "offset_steps",
         "offset_abs",
         "n",
@@ -465,6 +487,77 @@ def _write_dataset_outputs(records_by_run: dict[str, list[dict]], dataset: str, 
     )
 
 
+def _write_binned_outputs(
+    records_by_run: dict[str, list[dict]],
+    dataset: str,
+    output_dir: Path,
+    metric: str,
+    bins: list[tuple[int, int, str]],
+    suffix_label: str,
+) -> None:
+    label = DATASET_LABELS.get(dataset, dataset)
+    binned_by_run = {
+        run_name: _binned_stats(records, dataset, run_name, bins)
+        for run_name, records in records_by_run.items()
+    }
+    rows = [row for run_rows in binned_by_run.values() for row in run_rows]
+    suffix = "errors" if metric == "error" else metric
+    stats_path = output_dir / f"{dataset}_{suffix_label}_offset_stats.csv"
+    _write_stats_csv(stats_path, rows)
+    print(f"Saved -> {stats_path}")
+    _plot_lines(
+        binned_by_run,
+        f"{label}: {_metric_title(metric)} by binned touch distance",
+        "Absolute distance from touch",
+        metric,
+        output_dir / f"{dataset}_{suffix_label}_offset_{suffix}.png",
+    )
+
+
+def _parse_distance_bins(value: str) -> list[tuple[int, int, str]]:
+    bins: list[tuple[int, int, str]] = []
+    for raw_part in value.split(","):
+        part = raw_part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            lo_s, hi_s = part.split("-", 1)
+            lo, hi = int(lo_s), int(hi_s)
+        else:
+            lo = hi = int(part)
+        if lo < 0 or hi < lo:
+            raise ValueError(f"Invalid distance bin: {part!r}")
+        bins.append((lo, hi, str(lo) if lo == hi else f"{lo}-{hi}"))
+    if not bins:
+        raise ValueError("--distance-bins did not contain any bins")
+    return bins
+
+
+def _balanced_bins(records_by_run: dict[str, list[dict]], n_bins: int) -> list[tuple[int, int, str]]:
+    if n_bins <= 0:
+        raise ValueError("--balanced-bins must be positive")
+    distances = sorted({
+        int(r["offset_abs"])
+        for records in records_by_run.values()
+        for r in records
+        if int(r["offset_abs"]) > 0
+    })
+    if not distances:
+        return []
+    n_bins = min(n_bins, len(distances))
+    bins: list[tuple[int, int, str]] = []
+    prev_end_idx = -1
+    for i in range(n_bins):
+        end_idx = round((i + 1) * len(distances) / n_bins) - 1
+        if end_idx <= prev_end_idx:
+            continue
+        lo = distances[prev_end_idx + 1]
+        hi = distances[end_idx]
+        bins.append((lo, hi, str(lo) if lo == hi else f"{lo}-{hi}"))
+        prev_end_idx = end_idx
+    return bins
+
+
 def _metric_title(metric: str) -> str:
     return "error" if metric == "error" else metric.upper() if metric == "f1" else metric
 
@@ -478,7 +571,12 @@ def main() -> None:
     parser.add_argument("--data-root", type=Path, default=Path(__file__).resolve().parents[3] / "data")
     parser.add_argument("--split", default="val", choices=["train", "val"])
     parser.add_argument("--output-dir", type=Path, default=Path(__file__).resolve().parents[3] / "results" / "evaluation" / "temporal_offsets")
-    parser.add_argument("--max-offset", type=int, default=4)
+    parser.add_argument("--max-offset", type=int, default=4,
+                        help="Maximum absolute offset for signed/absolute plots. Use 0 with binned modes to load all inferred offsets.")
+    parser.add_argument("--distance-bins", default=None,
+                        help=f"Optional absolute-distance bins, e.g. {DEFAULT_DISTANCE_BINS}. Adds a binned plot and CSV.")
+    parser.add_argument("--balanced-bins", type=int, default=None,
+                        help="Optional number of roughly balanced absolute-distance bins. Overrides --distance-bins when set.")
     parser.add_argument(
         "--metric",
         choices=METRICS,
@@ -506,7 +604,8 @@ def main() -> None:
 
     for dataset in args.datasets:
         anno_dir = args.data_root / DATASET_SUBDIRS[dataset]
-        rows = _load_offsets(dataset, anno_dir, args.split, args.max_offset)
+        load_max_offset = None if args.balanced_bins or args.distance_bins else args.max_offset
+        rows = _load_offsets(dataset, anno_dir, args.split, load_max_offset)
         if not rows:
             print(f"[SKIP] {dataset}: no offset annotation rows found in {anno_dir}")
             continue
@@ -514,7 +613,6 @@ def main() -> None:
         records_by_run: dict[str, list[dict]] = {}
         for run_name, primary, fallback in lookups:
             records = _analysis_df(rows, primary, fallback, run_name)
-            records = [r for r in records if r["offset_abs"] <= args.max_offset]
             if records:
                 records_by_run[run_name] = records
 
@@ -522,7 +620,23 @@ def main() -> None:
             print(f"[SKIP] {dataset}: no offset rows matched any prediction CSV")
             continue
 
-        _write_dataset_outputs(records_by_run, dataset, args.output_dir, args.max_offset, args.metric)
+        standard_records = {
+            run_name: [r for r in records if r["offset_abs"] <= args.max_offset]
+            for run_name, records in records_by_run.items()
+        }
+        standard_records = {run_name: records for run_name, records in standard_records.items() if records}
+        if standard_records:
+            _write_dataset_outputs(standard_records, dataset, args.output_dir, args.max_offset, args.metric)
+
+        if args.balanced_bins:
+            bins = _balanced_bins(records_by_run, args.balanced_bins)
+            if bins:
+                _write_binned_outputs(records_by_run, dataset, args.output_dir, args.metric, bins, "balanced_binned")
+            else:
+                print(f"[SKIP] {dataset}: no nonzero offsets available for balanced bins")
+        elif args.distance_bins:
+            bins = _parse_distance_bins(args.distance_bins)
+            _write_binned_outputs(records_by_run, dataset, args.output_dir, args.metric, bins, "binned")
 
 
 if __name__ == "__main__":
