@@ -413,21 +413,6 @@ def _plot_lines(stats_by_run: dict[str, list[dict]], title: str, xlabel: str, me
             label=run_name,
             zorder=3,
         )
-        y_shift = 7 if i % 2 == 0 else -13
-        va = "bottom" if y_shift > 0 else "top"
-        for xi, yi, row in zip(x, y, stats):
-            if math.isnan(yi):
-                continue
-            ax.annotate(
-                f"{yi:.2f}\nn={int(row['n'])}",
-                xy=(xi, yi),
-                xytext=(0, y_shift),
-                textcoords="offset points",
-                ha="center",
-                va=va,
-                fontsize=7,
-                color=color,
-            )
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
@@ -438,12 +423,7 @@ def _plot_lines(stats_by_run: dict[str, list[dict]], title: str, xlabel: str, me
     ax.grid(axis="y", zorder=0)
 
     handles, labels_legend = ax.get_legend_handles_labels()
-    if metric == "error":
-        handles.extend([
-            Line2D([], [], linestyle="none", label="offset 0: false negative rate"),
-            Line2D([], [], linestyle="none", label="nonzero offsets: false positive rate"),
-        ])
-    else:
+    if metric != "error":
         handles.append(Line2D([], [], linestyle="none", label=f"metric: {_metric_title(metric)} per offset bin"))
     labels_legend = [h.get_label() for h in handles]
     ax.legend(
@@ -609,22 +589,6 @@ def _plot_combined_grid(
             if len(legend_handles) < len(stats_by_run):
                 legend_handles.append(Line2D([], [], color=color, marker="o", label=run_name))
 
-            y_shift = 6 if i % 2 == 0 else -12
-            va = "bottom" if y_shift > 0 else "top"
-            for xi, yi, row in zip(x, values, stats):
-                if math.isnan(yi):
-                    continue
-                ax.annotate(
-                    f"{yi:.2f}\nn={int(row['n'])}",
-                    xy=(xi, yi),
-                    xytext=(0, y_shift),
-                    textcoords="offset points",
-                    ha="center",
-                    va=va,
-                    fontsize=6,
-                    color=color,
-                )
-
         ax.set_title(DATASET_LABELS.get(dataset, dataset), loc="left", fontsize=10)
         ax.set_xticks(x)
         ax.set_xticklabels(labels)
@@ -635,12 +599,7 @@ def _plot_combined_grid(
     axes[-1, 0].set_xlabel(xlabel)
     fig.suptitle(title, fontsize=13, fontweight="bold")
     handles = legend_handles[:]
-    if metric == "error":
-        handles.extend([
-            Line2D([], [], linestyle="none", label="offset 0: false negative rate"),
-            Line2D([], [], linestyle="none", label="nonzero offsets: false positive rate"),
-        ])
-    else:
+    if metric != "error":
         handles.append(Line2D([], [], linestyle="none", label=f"metric: {_metric_title(metric)} per bin"))
     fig.legend(
         handles=handles,
