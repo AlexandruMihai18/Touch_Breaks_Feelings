@@ -432,7 +432,7 @@ def _plot_lines(stats_by_run: dict[str, list[dict]], title: str, xlabel: str, me
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.set_xlabel(xlabel)
-    ax.set_ylabel("Error rate" if metric == "error" else metric.capitalize())
+    ax.set_ylabel(_ylabel(metric))
     ax.set_ylim(0, 1.15)
     ax.set_title(title)
     ax.grid(axis="y", zorder=0)
@@ -446,7 +446,14 @@ def _plot_lines(stats_by_run: dict[str, list[dict]], title: str, xlabel: str, me
     else:
         handles.append(Line2D([], [], linestyle="none", label=f"metric: {_metric_title(metric)} per offset bin"))
     labels_legend = [h.get_label() for h in handles]
-    ax.legend(handles, labels_legend, loc="upper left", bbox_to_anchor=(1.01, 1.0), borderaxespad=0.0)
+    ax.legend(
+        handles,
+        labels_legend,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.22),
+        ncol=min(3, len(handles)),
+        borderaxespad=0.0,
+    )
 
     output.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(output)
@@ -621,7 +628,7 @@ def _plot_combined_grid(
         ax.set_title(DATASET_LABELS.get(dataset, dataset), loc="left", fontsize=10)
         ax.set_xticks(x)
         ax.set_xticklabels(labels)
-        ax.set_ylabel("Error rate" if metric == "error" else metric.capitalize())
+        ax.set_ylabel(_ylabel(metric))
         ax.set_ylim(0, 1.15)
         ax.grid(axis="y", zorder=0)
 
@@ -635,7 +642,13 @@ def _plot_combined_grid(
         ])
     else:
         handles.append(Line2D([], [], linestyle="none", label=f"metric: {_metric_title(metric)} per bin"))
-    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(1.01, 0.98), frameon=False)
+    fig.legend(
+        handles=handles,
+        loc="lower center",
+        bbox_to_anchor=(0.5, -0.02),
+        ncol=min(3, len(handles)),
+        frameon=False,
+    )
     output.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(output, bbox_inches="tight")
     plt.close(fig)
@@ -725,6 +738,12 @@ def _make_plot_bins(ranges: list[tuple[int, int]], symmetric: bool, include_zero
 
 def _metric_title(metric: str) -> str:
     return "error" if metric == "error" else metric.upper() if metric == "f1" else metric
+
+
+def _ylabel(metric: str) -> str:
+    if metric == "error":
+        return "Error rate (FN at 0, FP elsewhere)"
+    return metric.capitalize()
 
 
 def main() -> None:
