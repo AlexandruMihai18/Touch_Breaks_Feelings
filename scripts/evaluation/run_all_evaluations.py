@@ -38,7 +38,7 @@ _EVAL = Path(__file__).parent
 
 _SCRIPTS = {
     "depth":    _EVAL / "depth"           / "analyze_depth_performance.py",
-    "object":   _EVAL / "object_classes"  / "analyze_object_performance.py",
+    "object":   _EVAL / "object_classes"  / "analyze_class_performance.py",
     "coverage": _EVAL / "object_coverage" / "analyze_coverage_performance.py",
     "zones":    _EVAL / "touch_zones"     / "analyze_grid_performance.py",
 }

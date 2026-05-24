@@ -49,13 +49,13 @@ python scripts/evaluation/touch_zones/analyze_grid_performance.py \
     --annotations "$ANNOTATIONS" \
     --output results/test/eval_grid_heatmap.png
 
-python scripts/evaluation/object_classes/analyze_object_performance.py \
+python scripts/evaluation/object_classes/analyze_class_performance.py \
     "$CSV" \
     --clusters "${EK_ROOT}/object_clusters_7.json" \
     --annotations "$ANNOTATIONS" \
     --output results/test/eval_object_perf_7.png
 
-python scripts/evaluation/object_classes/analyze_object_performance.py \
+python scripts/evaluation/object_classes/analyze_class_performance.py \
     "$CSV" \
     --clusters "${EK_ROOT}/object_clusters_gh.json" \
     --annotations "$ANNOTATIONS" \

@@ -6,7 +6,7 @@ TP / TN / FP / FN (and derived metrics) per cluster.
 
 Usage
 -----
-    python scripts/evaluation/object_classes/analyze_object_performance.py \\
+    python scripts/evaluation/object_classes/analyze_class_performance.py \\
         results/predictions.csv \\
         --clusters  data/epic_kitchen/object_clusters_7.json \\
         --annotations /scratch-shared/dotero/epic_kitchen/annotations/val.json \\
