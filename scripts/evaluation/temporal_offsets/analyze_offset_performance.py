@@ -12,8 +12,9 @@ By default, the plotted metric is class-specific:
   * nonzero offsets: false positive rate on no-touch context frames
 
 Use --metric f1 to plot binary F1 per offset bin instead.
-Use --distance-bins or --balanced-bins to additionally plot absolute-distance
-groups such as 1-4,5-10,11-20.
+Use --distance-bins or --balanced-bins to additionally plot binned distance
+groups.  By default, bins are symmetric: negative and positive ranges stay
+separate, with offset 0 included as its own bin.
 
 Usage
 -----
@@ -328,14 +329,23 @@ def _absolute_stats(records: list[dict], dataset: str, run_name: str, max_offset
     return rows
 
 
-def _binned_stats(records: list[dict], dataset: str, run_name: str, bins: list[tuple[int, int, str]]) -> list[dict]:
+def _binned_stats(records: list[dict], dataset: str, run_name: str, bins: list[dict]) -> list[dict]:
     rows = []
-    for lo, hi, label in bins:
-        group = [r for r in records if lo <= r["offset_abs"] <= hi]
-        row = _metric_row(dataset, run_name, lo, lo, group)
-        row["bin_label"] = label
-        row["bin_lo"] = lo
-        row["bin_hi"] = hi
+    for bin_def in bins:
+        if bin_def["side"] == "zero":
+            group = [r for r in records if r["offset_steps"] == 0]
+        elif bin_def["side"] == "neg":
+            group = [r for r in records if -bin_def["hi"] <= r["offset_steps"] <= -bin_def["lo"]]
+        elif bin_def["side"] == "pos":
+            group = [r for r in records if bin_def["lo"] <= r["offset_steps"] <= bin_def["hi"]]
+        else:
+            group = [r for r in records if bin_def["lo"] <= r["offset_abs"] <= bin_def["hi"]]
+
+        row = _metric_row(dataset, run_name, bin_def["offset_steps"], bin_def["lo"], group)
+        row["bin_label"] = bin_def["label"]
+        row["bin_lo"] = bin_def["lo"]
+        row["bin_hi"] = bin_def["hi"]
+        row["bin_side"] = bin_def["side"]
         rows.append(row)
     return rows
 
@@ -435,6 +445,7 @@ def _write_stats_csv(path: Path, rows: list[dict]) -> None:
         "bin_label",
         "bin_lo",
         "bin_hi",
+        "bin_side",
         "offset_steps",
         "offset_abs",
         "n",
@@ -492,7 +503,7 @@ def _write_binned_outputs(
     dataset: str,
     output_dir: Path,
     metric: str,
-    bins: list[tuple[int, int, str]],
+    bins: list[dict],
     suffix_label: str,
 ) -> None:
     label = DATASET_LABELS.get(dataset, dataset)
@@ -514,8 +525,8 @@ def _write_binned_outputs(
     )
 
 
-def _parse_distance_bins(value: str) -> list[tuple[int, int, str]]:
-    bins: list[tuple[int, int, str]] = []
+def _parse_distance_bins(value: str) -> list[tuple[int, int]]:
+    bins: list[tuple[int, int]] = []
     for raw_part in value.split(","):
         part = raw_part.strip()
         if not part:
@@ -527,13 +538,13 @@ def _parse_distance_bins(value: str) -> list[tuple[int, int, str]]:
             lo = hi = int(part)
         if lo < 0 or hi < lo:
             raise ValueError(f"Invalid distance bin: {part!r}")
-        bins.append((lo, hi, str(lo) if lo == hi else f"{lo}-{hi}"))
+        bins.append((lo, hi))
     if not bins:
         raise ValueError("--distance-bins did not contain any bins")
     return bins
 
 
-def _balanced_bins(records_by_run: dict[str, list[dict]], n_bins: int) -> list[tuple[int, int, str]]:
+def _balanced_bins(records_by_run: dict[str, list[dict]], n_bins: int) -> list[tuple[int, int]]:
     if n_bins <= 0:
         raise ValueError("--balanced-bins must be positive")
     distances = sorted({
@@ -545,7 +556,7 @@ def _balanced_bins(records_by_run: dict[str, list[dict]], n_bins: int) -> list[t
     if not distances:
         return []
     n_bins = min(n_bins, len(distances))
-    bins: list[tuple[int, int, str]] = []
+    bins: list[tuple[int, int]] = []
     prev_end_idx = -1
     for i in range(n_bins):
         end_idx = round((i + 1) * len(distances) / n_bins) - 1
@@ -553,8 +564,45 @@ def _balanced_bins(records_by_run: dict[str, list[dict]], n_bins: int) -> list[t
             continue
         lo = distances[prev_end_idx + 1]
         hi = distances[end_idx]
-        bins.append((lo, hi, str(lo) if lo == hi else f"{lo}-{hi}"))
+        bins.append((lo, hi))
         prev_end_idx = end_idx
+    return bins
+
+
+def _range_label(lo: int, hi: int) -> str:
+    return str(lo) if lo == hi else f"{lo}-{hi}"
+
+
+def _make_plot_bins(ranges: list[tuple[int, int]], symmetric: bool, include_zero: bool) -> list[dict]:
+    bins: list[dict] = []
+    if symmetric:
+        for lo, hi in reversed(ranges):
+            label = _range_label(lo, hi)
+            bins.append({
+                "label": f"-{label}",
+                "lo": lo,
+                "hi": hi,
+                "side": "neg",
+                "offset_steps": -lo,
+            })
+        if include_zero:
+            bins.append({"label": "0", "lo": 0, "hi": 0, "side": "zero", "offset_steps": 0})
+        for lo, hi in ranges:
+            label = _range_label(lo, hi)
+            bins.append({
+                "label": f"+{label}",
+                "lo": lo,
+                "hi": hi,
+                "side": "pos",
+                "offset_steps": lo,
+            })
+        return bins
+
+    if include_zero:
+        bins.append({"label": "0", "lo": 0, "hi": 0, "side": "zero", "offset_steps": 0})
+    for lo, hi in ranges:
+        label = _range_label(lo, hi)
+        bins.append({"label": label, "lo": lo, "hi": hi, "side": "abs", "offset_steps": lo})
     return bins
 
 
@@ -577,6 +625,10 @@ def main() -> None:
                         help=f"Optional absolute-distance bins, e.g. {DEFAULT_DISTANCE_BINS}. Adds a binned plot and CSV.")
     parser.add_argument("--balanced-bins", type=int, default=None,
                         help="Optional number of roughly balanced absolute-distance bins. Overrides --distance-bins when set.")
+    parser.add_argument("--combined-bins", action="store_true",
+                        help="Combine negative and positive distances in binned plots. Default keeps symmetric signed bins separate.")
+    parser.add_argument("--no-zero-bin", action="store_true",
+                        help="Do not include offset 0 in binned plots.")
     parser.add_argument(
         "--metric",
         choices=METRICS,
@@ -629,13 +681,15 @@ def main() -> None:
             _write_dataset_outputs(standard_records, dataset, args.output_dir, args.max_offset, args.metric)
 
         if args.balanced_bins:
-            bins = _balanced_bins(records_by_run, args.balanced_bins)
-            if bins:
+            ranges = _balanced_bins(records_by_run, args.balanced_bins)
+            if ranges:
+                bins = _make_plot_bins(ranges, symmetric=not args.combined_bins, include_zero=not args.no_zero_bin)
                 _write_binned_outputs(records_by_run, dataset, args.output_dir, args.metric, bins, "balanced_binned")
             else:
                 print(f"[SKIP] {dataset}: no nonzero offsets available for balanced bins")
         elif args.distance_bins:
-            bins = _parse_distance_bins(args.distance_bins)
+            ranges = _parse_distance_bins(args.distance_bins)
+            bins = _make_plot_bins(ranges, symmetric=not args.combined_bins, include_zero=not args.no_zero_bin)
             _write_binned_outputs(records_by_run, dataset, args.output_dir, args.metric, bins, "binned")
 
 
