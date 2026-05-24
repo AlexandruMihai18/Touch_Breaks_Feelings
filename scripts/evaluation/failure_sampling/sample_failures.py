@@ -86,9 +86,21 @@ _COLOR_TOUCH  = (230,  45,  45, 170)   # red   — touch / refined touch
 
 # ── Mask lookup ───────────────────────────────────────────────────────────────
 
-def _build_mask_lookup(annotation_paths: list[Path]) -> dict[tuple[str, int], dict]:
-    """Return {(image_basename, label_int): annotation_entry} from JSON files."""
-    lookup: dict[tuple[str, int], dict] = {}
+def _mask_key(img_path: str, label: int) -> tuple[str, str, int]:
+    """Stable lookup key: (video_dir_name, frame_filename, label).
+
+    Using just basename collides for Greatest Hits where every video has
+    frame_000001.jpg, frame_000002.jpg, etc.  Including the parent directory
+    (which is always the video folder) disambiguates without depending on
+    absolute path prefixes that differ across machines.
+    """
+    p = Path(img_path)
+    return (p.parent.name, p.name, label)
+
+
+def _build_mask_lookup(annotation_paths: list[Path]) -> dict[tuple[str, str, int], dict]:
+    """Return {(video_dir, frame_filename, label_int): annotation_entry} from JSON files."""
+    lookup: dict[tuple[str, str, int], dict] = {}
     for path in annotation_paths:
         if not path.exists():
             print(f"[WARN] annotation file not found: {path}")
@@ -100,7 +112,7 @@ def _build_mask_lookup(annotation_paths: list[Path]) -> dict[tuple[str, int], di
             if not img:
                 continue
             label = 1 if entry.get("type") == "touch" else 0
-            key = (Path(img).name, label)
+            key = _mask_key(img, label)
             if key not in lookup:
                 lookup[key] = entry
     return lookup
@@ -275,7 +287,7 @@ def _save_sample(
     shutil.copy2(src, dst)
 
     if mask_lookup is not None and dataset is not None:
-        key = (src.name, int(row["label"]))
+        key = _mask_key(str(src), int(row["label"]))
         entry = mask_lookup.get(key)
         if entry is not None:
             agent, obj, touch = _resolve_mask_paths(entry, dataset, int(row["label"]) == 1)
