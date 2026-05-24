@@ -151,6 +151,98 @@ _RUNS: list[dict] = [
         csv      = "/home/dotero/Touch_Breaks_Feelings/results/kubric_val_seggpt_touch_results.csv",
         run_name = "kubric_segGPT",
     ),
+
+    # ── Epic Kitchen — DINO (merged binary + point) ───────────────────────────
+    dict(
+        dataset  = "epic_kitchen",
+        csv      = "/home/dotero/Touch_Breaks_Feelings/results/ek_dino_mlp2_prediction.csv",
+        run_name = "ek_dino_mlp2",
+    ),
+    dict(
+        dataset  = "epic_kitchen",
+        csv      = "/home/dotero/Touch_Breaks_Feelings/results/ek_dino_mlp3_prediction.csv",
+        run_name = "ek_dino_mlp3",
+    ),
+    dict(
+        dataset  = "epic_kitchen",
+        csv      = "/home/dotero/Touch_Breaks_Feelings/results/ek_dino_mlp4_prediction.csv",
+        run_name = "ek_dino_mlp4",
+    ),
+    dict(
+        dataset  = "epic_kitchen",
+        csv      = "/home/dotero/Touch_Breaks_Feelings/results/ek_dino_linear_prediction.csv",
+        run_name = "ek_dino_linear",
+    ),
+
+    # ── Greatest Hits — DINO (merged binary + point) ─────────────────────────
+    dict(
+        dataset  = "greatest_hits",
+        csv      = "/home/dotero/Touch_Breaks_Feelings/results/gh_dino_mlp2_prediction.csv",
+        run_name = "gh_dino_mlp2",
+    ),
+    dict(
+        dataset  = "greatest_hits",
+        csv      = "/home/dotero/Touch_Breaks_Feelings/results/gh_dino_mlp3_prediction.csv",
+        run_name = "gh_dino_mlp3",
+    ),
+    dict(
+        dataset  = "greatest_hits",
+        csv      = "/home/dotero/Touch_Breaks_Feelings/results/gh_dino_mlp4_prediction.csv",
+        run_name = "gh_dino_mlp4",
+    ),
+    dict(
+        dataset  = "greatest_hits",
+        csv      = "/home/dotero/Touch_Breaks_Feelings/results/gh_dino_linear_prediction.csv",
+        run_name = "gh_dino_linear",
+    ),
+
+    # ── Kubric — DINO (merged binary + point) ────────────────────────────────
+    dict(
+        dataset  = "kubric",
+        csv      = "/home/dotero/Touch_Breaks_Feelings/results/kubric_dino_mlp2_prediction.csv",
+        run_name = "kubric_dino_mlp2",
+    ),
+    dict(
+        dataset  = "kubric",
+        csv      = "/home/dotero/Touch_Breaks_Feelings/results/kubric_dino_mlp3_prediction.csv",
+        run_name = "kubric_dino_mlp3",
+    ),
+    dict(
+        dataset  = "kubric",
+        csv      = "/home/dotero/Touch_Breaks_Feelings/results/kubric_dino_mlp4_prediction.csv",
+        run_name = "kubric_dino_mlp4",
+    ),
+    dict(
+        dataset  = "kubric",
+        csv      = "/home/dotero/Touch_Breaks_Feelings/results/kubric_dino_linear_prediction.csv",
+        run_name = "kubric_dino_linear",
+    ),
+
+    # ── Greatest Hits — Qwen finetuned (merged binary + point) ───────────────
+    dict(
+        dataset  = "greatest_hits",
+        csv      = "/home/dotero/Touch_Breaks_Feelings/results/gh_qwen_ft_prediction.csv",
+        run_name = "gh_qwen_ft",
+    ),
+
+    # ── Epic Kitchen — Qwen finetuned (binary only) ───────────────────────────
+    dict(
+        dataset  = "epic_kitchen",
+        csv      = "/home/dotero/Touch_Breaks_Feelings/results/ek_qwen_ft_binary_prediction.csv",
+        run_name = "ek_qwen_ft_binary",
+    ),
+
+    # ── Kubric — Qwen finetuned ────────────────────────────────────────────────
+    dict(
+        dataset  = "kubric",
+        csv      = "/home/dotero/Touch_Breaks_Feelings/results/kubric_qwen_ft_binary_prediction.csv",
+        run_name = "kubric_qwen_ft_binary",
+    ),
+    dict(
+        dataset  = "kubric",
+        csv      = "/home/dotero/Touch_Breaks_Feelings/results/kubric_qwen_ft_point_prediction.csv",
+        run_name = "kubric_qwen_ft_point",
+    ),
 ]
 
 
