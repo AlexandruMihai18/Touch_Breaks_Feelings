@@ -189,6 +189,8 @@ def main() -> None:
         f"\nGlobal stats  (n={stats['total']})\n"
         f"  accuracy : {stats['accuracy']:.3f}\n"
         f"  F1       : {stats['f1']:.3f}\n"
+        f"  Precision: {stats['tp'] / (stats['tp'] + stats['fp']):.3f}\n"
+        f"  Recall   : {stats['tp'] / (stats['tp'] + stats['fn']):.3f}\n"
         f"  TP={stats['tp']}  FP={stats['fp']}  FN={stats['fn']}  TN={stats['tn']}"
     )
 

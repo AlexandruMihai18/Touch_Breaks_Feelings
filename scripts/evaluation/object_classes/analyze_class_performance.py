@@ -208,6 +208,8 @@ def main() -> None:
         f"TP={tp}  TN={tn}  FP={fp}  FN={fn}  "
         f"F1={f1_score(y_true, y_pred, zero_division=0):.3f}  "
         f"acc={accuracy_score(y_true, y_pred):.3f}"
+        f"Precision: {tp / (tp + fp):.3f}\n"
+        f"Recall   : {tp / (tp + fn):.3f}\n"
     )
 
 

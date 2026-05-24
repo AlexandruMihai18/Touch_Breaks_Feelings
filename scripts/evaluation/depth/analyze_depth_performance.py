@@ -163,8 +163,10 @@ def main() -> None:
     if len(touch) > 0:
         gs = global_stats(touch)
         print(f"\nGlobal (depth-annotated samples, n={gs['total']}): "
-
-              f"accuracy={gs['accuracy']:.3f}  F1={gs['f1']:.3f}")
+              f"accuracy={gs['accuracy']:.3f}  F1={gs['f1']:.3f}\n"
+            f"  Precision: {gs['tp'] / (gs['tp'] + gs['fp']):.3f}\n"
+            f"  Recall   : {gs['tp'] / (gs['tp'] + gs['fn']):.3f}\n"
+        )
 
 
 def global_stats(df: pd.DataFrame) -> dict:

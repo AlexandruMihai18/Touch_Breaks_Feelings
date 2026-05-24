@@ -172,6 +172,8 @@ def main() -> None:
     gs = global_stats(df.dropna(subset=["object_coverage"]))
     print(f"\nGlobal (coverage-annotated samples, n={gs['total']}): "
           f"accuracy={gs['accuracy']:.3f}  F1={gs['f1']:.3f}  "
+        f"  Precision: {gs['tp'] / (gs['tp'] + gs['fp']):.3f}\n"
+        f"  Recall   : {gs['tp'] / (gs['tp'] + gs['fn']):.3f}\n"
           f"TP={gs['tp']}  FP={gs['fp']}  FN={gs['fn']}  TN={gs['tn']}")
 
 
