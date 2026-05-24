@@ -80,11 +80,16 @@ def _augment_row(
     y_gt: int,
     grid: int,
     pred_normalized: bool = False,
+    cx_gt_n: float | None = None,
+    cy_gt_n: float | None = None,
 ) -> tuple[int, int, float]:
     """Return (x_pred_cell, y_pred_cell, error_norm).
 
     error_norm is the joint 2-D Euclidean distance in normalized [0, 1] space
-    between the predicted point and the GT cell centroid.
+    between the predicted point and the GT reference point.
+
+    cx_gt_n / cy_gt_n: pre-computed GT in [0, 1] (mask centroid from annotation).
+    If not provided, falls back to the cell centroid ((x_gt+0.5)/grid).
     """
     if pred_normalized:
         x_n, y_n = x_pred, y_pred
@@ -92,11 +97,12 @@ def _augment_row(
         w, h = _image_size(frame_path)
         x_n = x_pred / w
         y_n = y_pred / h
-    cx_n = (x_gt + 0.5) / grid
-    cy_n = (y_gt + 0.5) / grid
+    if cx_gt_n is None or cy_gt_n is None:
+        cx_gt_n = (x_gt + 0.5) / grid
+        cy_gt_n = (y_gt + 0.5) / grid
     xc = max(0, min(int(x_n * grid), grid - 1))
     yc = max(0, min(int(y_n * grid), grid - 1))
-    err = float(np.sqrt((x_n - cx_n) ** 2 + (y_n - cy_n) ** 2))
+    err = float(np.sqrt((x_n - cx_gt_n) ** 2 + (y_n - cy_gt_n) ** 2))
     return xc, yc, err
 
 
@@ -263,10 +269,26 @@ def main() -> None:
         mask_mode = "zero_coord" if "qwen" in args.csv.name.lower() else "predicted_touch"
     pred_normalized = mask_mode == "zero_coord"  # Qwen outputs [0,1]; DINO outputs pixels
 
+    # ── Check for mask-centroid annotation (preferred GT over cell centroid) ───
+    has_centroid = (
+        "x_touch_centroid" in df.columns
+        and "y_touch_centroid" in df.columns
+        and df["x_touch_centroid"].notna().any()
+    )
+    gt_source = "mask centroid (x_touch_centroid)" if has_centroid else f"cell centroid ({args.grid}×{args.grid} grid)"
+    print(f"  GT source: {gt_source}")
+
     # ── Map predictions to grid cells and compute normalized error ────────────
     results = []
     skipped = 0
     for _, row in df.iterrows():
+        if has_centroid:
+            cx = row.get("x_touch_centroid")
+            cy = row.get("y_touch_centroid")
+            cx_gt_n = float(cx) if cx is not None and pd.notna(cx) else None
+            cy_gt_n = float(cy) if cy is not None and pd.notna(cy) else None
+        else:
+            cx_gt_n = cy_gt_n = None
         try:
             xc, yc, err = _augment_row(
                 str(row["frame_path"]),
@@ -276,9 +298,11 @@ def main() -> None:
                 int(row["y_gt"]),
                 args.grid,
                 pred_normalized=pred_normalized,
+                cx_gt_n=cx_gt_n,
+                cy_gt_n=cy_gt_n,
             )
             results.append((xc, yc, err))
-        except Exception as exc:
+        except Exception:
             results.append((None, None, None))
             skipped += 1
 
@@ -320,14 +344,15 @@ def main() -> None:
     base = Path(base)
 
     stats = {
-        "hit_at_1":         float(hit1.mean()),
-        "mean_error_norm":  float(df["error_norm"].mean()),
+        "hit_at_1":          float(hit1.mean()),
+        "mean_error_norm":   float(df["error_norm"].mean()),
         "median_error_norm": float(df["error_norm"].median()),
-        "rmse_norm":        rmse,
-        "n":                n,
-        "n_masked":         n_masked,
-        "mask_mode":        mask_mode,
-        "grid":             args.grid,
+        "rmse_norm":         rmse,
+        "n":                 n,
+        "n_masked":          n_masked,
+        "mask_mode":         mask_mode,
+        "gt_source":         "mask_centroid" if has_centroid else "cell_centroid",
+        "grid":              args.grid,
     }
     stats_path = base.with_name(base.stem + "_stats.json")
     stats_path.write_text(json.dumps(stats, indent=2))
