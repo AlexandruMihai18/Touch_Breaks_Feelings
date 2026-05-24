@@ -482,14 +482,7 @@ def _write_stats_csv(path: Path, rows: list[dict]) -> None:
 
 def _write_dataset_outputs(records_by_run: dict[str, list[dict]], dataset: str, output_dir: Path, max_offset: int, metric: str) -> None:
     label = DATASET_LABELS.get(dataset, dataset)
-    signed_by_run = {
-        run_name: _signed_stats(records, dataset, run_name, max_offset)
-        for run_name, records in records_by_run.items()
-    }
-    absolute_by_run = {
-        run_name: _absolute_stats(records, dataset, run_name, max_offset)
-        for run_name, records in records_by_run.items()
-    }
+    signed_by_run, absolute_by_run = _standard_stats_by_run(records_by_run, dataset, max_offset)
     signed = [row for rows in signed_by_run.values() for row in rows]
     suffix = "errors" if metric == "error" else metric
 
@@ -514,6 +507,33 @@ def _write_dataset_outputs(records_by_run: dict[str, list[dict]], dataset: str, 
     )
 
 
+def _standard_stats_by_run(
+    records_by_run: dict[str, list[dict]],
+    dataset: str,
+    max_offset: int,
+) -> tuple[dict[str, list[dict]], dict[str, list[dict]]]:
+    signed_by_run = {
+        run_name: _signed_stats(records, dataset, run_name, max_offset)
+        for run_name, records in records_by_run.items()
+    }
+    absolute_by_run = {
+        run_name: _absolute_stats(records, dataset, run_name, max_offset)
+        for run_name, records in records_by_run.items()
+    }
+    return signed_by_run, absolute_by_run
+
+
+def _binned_stats_by_run(
+    records_by_run: dict[str, list[dict]],
+    dataset: str,
+    bins: list[dict],
+) -> dict[str, list[dict]]:
+    return {
+        run_name: _binned_stats(records, dataset, run_name, bins)
+        for run_name, records in records_by_run.items()
+    }
+
+
 def _write_binned_outputs(
     records_by_run: dict[str, list[dict]],
     dataset: str,
@@ -523,10 +543,7 @@ def _write_binned_outputs(
     suffix_label: str,
 ) -> None:
     label = DATASET_LABELS.get(dataset, dataset)
-    binned_by_run = {
-        run_name: _binned_stats(records, dataset, run_name, bins)
-        for run_name, records in records_by_run.items()
-    }
+    binned_by_run = _binned_stats_by_run(records_by_run, dataset, bins)
     rows = [row for run_rows in binned_by_run.values() for row in run_rows]
     suffix = "errors" if metric == "error" else metric
     stats_path = output_dir / f"{dataset}_{suffix_label}_offset_stats.csv"
@@ -539,6 +556,90 @@ def _write_binned_outputs(
         metric,
         output_dir / f"{dataset}_{suffix_label}_offset_{suffix}.png",
     )
+
+
+def _plot_combined_grid(
+    stats_by_dataset: dict[str, dict[str, list[dict]]],
+    title: str,
+    xlabel: str,
+    metric: str,
+    output: Path,
+) -> None:
+    if not stats_by_dataset:
+        return
+
+    plot_style.apply()
+    n = len(stats_by_dataset)
+    fig_h = max(3.1, 2.6 * n)
+    fig, axes = plt.subplots(n, 1, figsize=(10.5, fig_h), squeeze=False)
+    colors = plt.cm.tab10.colors
+    legend_handles: list[Line2D] = []
+
+    for ax, (dataset, stats_by_run) in zip(axes[:, 0], stats_by_dataset.items()):
+        first_stats = next(iter(stats_by_run.values()))
+        if first_stats and "bin_label" in first_stats[0]:
+            labels = [str(row["bin_label"]) for row in first_stats]
+        else:
+            labels = [
+                f"{int(row['offset_steps']):+d}" if xlabel == "Signed offset steps" else str(int(row["offset_steps"]))
+                for row in first_stats
+            ]
+        x = list(range(len(first_stats)))
+
+        for i, (run_name, stats) in enumerate(stats_by_run.items()):
+            color = colors[i % len(colors)]
+            values = [math.nan if row["n"] == 0 else float(row[metric]) for row in stats]
+            ax.plot(
+                x,
+                values,
+                marker="o",
+                linewidth=1.7,
+                markersize=4.0,
+                color=color,
+                label=run_name,
+                zorder=3,
+            )
+            if len(legend_handles) < len(stats_by_run):
+                legend_handles.append(Line2D([], [], color=color, marker="o", label=run_name))
+
+            y_shift = 6 if i % 2 == 0 else -12
+            va = "bottom" if y_shift > 0 else "top"
+            for xi, yi, row in zip(x, values, stats):
+                if math.isnan(yi):
+                    continue
+                ax.annotate(
+                    f"{yi:.2f}\nn={int(row['n'])}",
+                    xy=(xi, yi),
+                    xytext=(0, y_shift),
+                    textcoords="offset points",
+                    ha="center",
+                    va=va,
+                    fontsize=6,
+                    color=color,
+                )
+
+        ax.set_title(DATASET_LABELS.get(dataset, dataset), loc="left", fontsize=10)
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels)
+        ax.set_ylabel("Error rate" if metric == "error" else metric.capitalize())
+        ax.set_ylim(0, 1.15)
+        ax.grid(axis="y", zorder=0)
+
+    axes[-1, 0].set_xlabel(xlabel)
+    fig.suptitle(title, fontsize=13, fontweight="bold")
+    handles = legend_handles[:]
+    if metric == "error":
+        handles.extend([
+            Line2D([], [], linestyle="none", label="offset 0: false negative rate"),
+            Line2D([], [], linestyle="none", label="nonzero offsets: false positive rate"),
+        ])
+    else:
+        handles.append(Line2D([], [], linestyle="none", label=f"metric: {_metric_title(metric)} per bin"))
+    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(1.01, 0.98), frameon=False)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Saved -> {output}")
 
 
 def _parse_distance_bins(value: str) -> list[tuple[int, int]]:
@@ -645,6 +746,8 @@ def main() -> None:
                         help="Combine negative and positive distances in binned plots. Default keeps symmetric signed bins separate.")
     parser.add_argument("--no-zero-bin", action="store_true",
                         help="Do not include offset 0 in binned plots.")
+    parser.add_argument("--combined-plot", action="store_true",
+                        help="Also write one multi-panel plot across all requested datasets.")
     parser.add_argument(
         "--metric",
         choices=METRICS,
@@ -669,6 +772,12 @@ def main() -> None:
             raise ValueError(f"{path} missing columns: {missing}")
         primary, fallback = _prediction_lookup(pred_rows)
         lookups.append((run_name, primary, fallback))
+
+    suffix = "errors" if args.metric == "error" else args.metric
+    combined_signed: dict[str, dict[str, list[dict]]] = {}
+    combined_absolute: dict[str, dict[str, list[dict]]] = {}
+    combined_binned: dict[str, dict[str, list[dict]]] = {}
+    combined_binned_label: str | None = None
 
     for dataset in args.datasets:
         anno_dir = args.data_root / DATASET_SUBDIRS[dataset]
@@ -695,18 +804,52 @@ def main() -> None:
         standard_records = {run_name: records for run_name, records in standard_records.items() if records}
         if standard_records:
             _write_dataset_outputs(standard_records, dataset, args.output_dir, args.max_offset, args.metric)
+            if args.combined_plot:
+                signed_by_run, absolute_by_run = _standard_stats_by_run(standard_records, dataset, args.max_offset)
+                combined_signed[dataset] = signed_by_run
+                combined_absolute[dataset] = absolute_by_run
 
         if args.balanced_bins:
             ranges = _balanced_bins(records_by_run, args.balanced_bins)
             if ranges:
                 bins = _make_plot_bins(ranges, symmetric=not args.combined_bins, include_zero=not args.no_zero_bin)
                 _write_binned_outputs(records_by_run, dataset, args.output_dir, args.metric, bins, "balanced_binned")
+                if args.combined_plot:
+                    combined_binned[dataset] = _binned_stats_by_run(records_by_run, dataset, bins)
+                    combined_binned_label = "balanced_binned"
             else:
                 print(f"[SKIP] {dataset}: no nonzero offsets available for balanced bins")
         elif args.distance_bins:
             ranges = _parse_distance_bins(args.distance_bins)
             bins = _make_plot_bins(ranges, symmetric=not args.combined_bins, include_zero=not args.no_zero_bin)
             _write_binned_outputs(records_by_run, dataset, args.output_dir, args.metric, bins, "binned")
+            if args.combined_plot:
+                combined_binned[dataset] = _binned_stats_by_run(records_by_run, dataset, bins)
+                combined_binned_label = "binned"
+
+    if args.combined_plot:
+        _plot_combined_grid(
+            combined_signed,
+            f"All datasets: {_metric_title(args.metric)} by signed temporal offset",
+            "Signed offset steps",
+            args.metric,
+            args.output_dir / f"combined_signed_offset_{suffix}.png",
+        )
+        _plot_combined_grid(
+            combined_absolute,
+            f"All datasets: {_metric_title(args.metric)} by absolute temporal offset",
+            "Absolute offset steps",
+            args.metric,
+            args.output_dir / f"combined_absolute_offset_{suffix}.png",
+        )
+        if combined_binned and combined_binned_label:
+            _plot_combined_grid(
+                combined_binned,
+                f"All datasets: {_metric_title(args.metric)} by binned touch distance",
+                "Distance from touch",
+                args.metric,
+                args.output_dir / f"combined_{combined_binned_label}_offset_{suffix}.png",
+            )
 
 
 if __name__ == "__main__":
