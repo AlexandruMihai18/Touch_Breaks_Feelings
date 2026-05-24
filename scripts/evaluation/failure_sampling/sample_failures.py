@@ -208,27 +208,48 @@ def _make_overlay(
     if not legend_items:
         return result
 
-    draw = ImageDraw.Draw(result)
-    pad, sq, row_h = 8, 14, 18
+    from PIL import ImageFont
 
-    # Opaque dark background for the legend
+    # Scale all UI dimensions relative to the shorter image edge.
+    # At 256 px the values match the original design; they grow linearly above.
+    scale     = max(1.0, min(W, H) / 256.0)
+    pad       = max(6,  int(8  * scale))
+    sq        = max(10, int(14 * scale))
+    row_h     = max(16, int(20 * scale))
+    font_size = max(11, int(11 * scale))
+
+    # Scaled font — try Pillow ≥10.1 load_default(size=), then fall back
+    try:
+        font = ImageFont.load_default(size=font_size)
+    except TypeError:
+        font = ImageFont.load_default()
+
+    # Measure the widest legend label so the background box fits exactly
+    draw = ImageDraw.Draw(result)
+    max_lbl_w = max(
+        int(draw.textlength(lbl, font=font)) for _, lbl in legend_items
+    )
+    legend_bg_w = pad + sq + pad + max_lbl_w + pad
+
     legend_h = len(legend_items) * row_h + pad
-    draw.rectangle([0, 0, 112, legend_h + pad], fill=(15, 15, 15))
+    draw.rectangle([0, 0, legend_bg_w, legend_h + pad], fill=(15, 15, 15))
 
     y = pad
     for rgb, lbl in legend_items:
         draw.rectangle([pad, y, pad + sq, y + sq], fill=rgb)
-        # Black shadow + white text for readability on any background
-        draw.text((pad + sq + 5 + 1, y + 1), lbl, fill=(0, 0, 0))
-        draw.text((pad + sq + 5,     y),     lbl, fill=(255, 255, 255))
+        draw.text((pad + sq + pad + 1, y + 1), lbl, font=font, fill=(0, 0, 0))
+        draw.text((pad + sq + pad,     y),     lbl, font=font, fill=(255, 255, 255))
         y += row_h
 
-    # Error-type badge (bottom-left)
+    # Error-type badge (bottom-left), sized to fit the text
     badge_color = (200, 50, 50) if error_type == "FN" else (50, 100, 200)
-    bx, by = pad, H - pad - 18
-    draw.rectangle([bx - 2, by - 2, bx + 36, by + 16], fill=badge_color)
-    draw.text((bx + 1, by + 1), error_type, fill=(0, 0, 0))
-    draw.text((bx,     by),     error_type, fill=(255, 255, 255))
+    badge_w = int(draw.textlength(error_type, font=font)) + pad * 2
+    badge_h = font_size + pad
+    bx, by  = pad, H - pad - badge_h
+    draw.rectangle([bx - pad // 2, by - pad // 2,
+                    bx + badge_w,  by + badge_h], fill=badge_color)
+    draw.text((bx + 1, by + 1), error_type, font=font, fill=(0, 0, 0))
+    draw.text((bx,     by),     error_type, font=font, fill=(255, 255, 255))
 
     return result
 
