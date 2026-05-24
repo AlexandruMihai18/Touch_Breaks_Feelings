@@ -171,9 +171,6 @@ def process_bin(
     for _, row in df.iterrows():
         sample_stem = Path(str(row["sample"])).stem
         inferred_path = bin_dir / f"{sample_stem}_inferred.jpg"
-        if inferred_path.exists():
-            print(f"    {sample_stem}: already inferred — skip")
-            continue
 
         frame_path = str(row.get("frame_path", ""))
         if not frame_path or not Path(frame_path).exists():
