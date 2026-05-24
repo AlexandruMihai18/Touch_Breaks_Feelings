@@ -9,11 +9,10 @@ are integer cell indices in [0, N) produced by annotate_touch_zones.py.
 Distance metric
 ---------------
 All coordinates are normalized to [0, 1] before comparison so the metric is
-independent of image resolution and model input size:
+independent of image resolution and model input size.
 
-  * Qwen models output x_touch / y_touch already in [0, 1].
-  * DINO models output pixel coordinates; these are divided by the original
-    image dimensions to normalize.
+Both DINO and Qwen output x_touch / y_touch as pixel coordinates; these are
+divided by the original image dimensions (width, height) to normalize.
 
 The GT cell centroid is computed as ((x_gt + 0.5) / grid, (y_gt + 0.5) / grid),
 also in [0, 1].  The error per sample is the joint 2-D Euclidean distance
@@ -225,10 +224,9 @@ def main() -> None:
     parser.add_argument(
         "--mask-mode", choices=["auto", "zero_coord", "predicted_touch"], default="auto",
         help="How to mask rows before computing RMSE. "
-             "zero_coord: exclude x_pred=0 & y_pred=0 (Qwen models). "
-             "predicted_touch: only include rows with prediction==1 (DINO models). "
-             "auto (default): infers zero_coord when 'qwen' is in the CSV name, "
-             "predicted_touch otherwise.",
+             "predicted_touch: only include rows with prediction==1 (default for all models). "
+             "zero_coord: exclude x_pred=0 & y_pred=0 (legacy Qwen fallback). "
+             "auto (default): uses predicted_touch for all models.",
     )
     args = parser.parse_args()
 
@@ -263,11 +261,11 @@ def main() -> None:
         sys.exit(1)
     print(f"  Rows with GT cell indices  : {len(df):,}")
 
-    # ── Resolve mask mode before augmentation (determines coordinate handling) ─
+    # ── Resolve mask mode ─────────────────────────────────────────────────────
     mask_mode = args.mask_mode
     if mask_mode == "auto":
-        mask_mode = "zero_coord" if "qwen" in args.csv.name.lower() else "predicted_touch"
-    pred_normalized = mask_mode == "zero_coord"  # Qwen outputs [0,1]; DINO outputs pixels
+        mask_mode = "predicted_touch"
+    pred_normalized = False  # Both DINO and Qwen output pixel coordinates
 
     # ── Check for mask-centroid annotation (preferred GT over cell centroid) ───
     has_centroid = (
