@@ -187,8 +187,7 @@ def _plot_heatmap(
     ax.set_title(title, pad=14)
     ax.grid(False)
 
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=150)
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved → {output_path}")
 
