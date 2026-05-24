@@ -214,8 +214,8 @@ def _merge_one(spec: dict, dry_run: bool) -> bool:
         bin_df = pd.read_csv(binary_path)
         path_col = _detect_path_col(bin_df, str(binary_path))
         bin_df = (
-            bin_df[[path_col, "label", "pred"]]
-            .rename(columns={path_col: "frame_path", "pred": "prediction"})
+            bin_df[[path_col, "label", "prediction"]]
+            .rename(columns={path_col: "frame_path", "prediction": "prediction"})
         )
         frames.append(("binary", bin_df))
 
@@ -223,8 +223,8 @@ def _merge_one(spec: dict, dry_run: bool) -> bool:
         pt_df = pd.read_csv(point_path)
         path_col = _detect_path_col(pt_df, str(point_path))
         pt_df = (
-            pt_df[[path_col, "touch_x", "touch_y"]]
-            .rename(columns={path_col: "frame_path", "touch_x": "x_touch", "touch_y": "y_touch"})
+            pt_df[[path_col, "x_touch", "y_touch"]]
+            .rename(columns={path_col: "frame_path", "x_touch": "x_touch", "y_touch": "y_touch"})
         )
         frames.append(("point", pt_df))
 
