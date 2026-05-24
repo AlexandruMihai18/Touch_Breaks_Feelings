@@ -213,19 +213,19 @@ def _merge_one(spec: dict, dry_run: bool) -> bool:
     if binary_path:
         bin_df = pd.read_csv(binary_path)
         path_col = _detect_path_col(bin_df, str(binary_path))
-        bin_df = (
-            bin_df[[path_col, "label", "prediction"]]
-            .rename(columns={path_col: "frame_path", "prediction": "prediction"})
-        )
+        keep = [c for c in ["frame_id", path_col, "label", "prediction"] if c in bin_df.columns]
+        bin_df = bin_df[keep].rename(columns={path_col: "frame_path"})
         frames.append(("binary", bin_df))
 
     if point_path:
         pt_df = pd.read_csv(point_path)
         path_col = _detect_path_col(pt_df, str(point_path))
-        pt_df = (
-            pt_df[[path_col, "x_touch", "y_touch"]]
-            .rename(columns={path_col: "frame_path", "x_touch": "x_touch", "y_touch": "y_touch"})
-        )
+        # include frame_id only if binary didn't already supply it
+        has_frame_id_from_binary = binary_path and "frame_id" in frames[0][1].columns
+        pt_keep = [c for c in ["frame_id", path_col, "x_touch", "y_touch"] if c in pt_df.columns]
+        if has_frame_id_from_binary and "frame_id" in pt_keep:
+            pt_keep.remove("frame_id")
+        pt_df = pt_df[pt_keep].rename(columns={path_col: "frame_path"})
         frames.append(("point", pt_df))
 
     if len(frames) == 2:
