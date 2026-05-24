@@ -63,6 +63,9 @@ DATASET_LABELS = {
 
 METRICS = ["error", "accuracy", "precision", "recall", "f1"]
 DEFAULT_DISTANCE_BINS = "1-4,5-10,11-20"
+DEFAULT_FIG_WIDTH_PX = 1600
+DEFAULT_FIG_HEIGHT_PX = 1000
+DEFAULT_FIG_DPI = 200
 
 _FRAME_NUM_RE = re.compile(r"(?:frame_)?(\d+)(?:\.[^.]+)?$")
 
@@ -396,7 +399,35 @@ def _metric_row(dataset: str, run_name: str, offset_steps: int, offset_abs: int,
     }
 
 
-def _plot_lines(stats_by_run: dict[str, list[dict]], title: str, xlabel: str, metric: str, output: Path) -> None:
+def _figsize(width_px: int, height_px: int, dpi: int) -> tuple[float, float]:
+    return width_px / dpi, height_px / dpi
+
+
+def _save_fixed_figure(fig, output: Path, width_px: int, height_px: int, dpi: int) -> None:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output, dpi=dpi, bbox_inches=None, pad_inches=0)
+    try:
+        from PIL import Image
+    except ImportError:
+        return
+
+    with Image.open(output) as img:
+        if img.size == (width_px, height_px):
+            return
+        fixed = img.resize((width_px, height_px), Image.Resampling.LANCZOS)
+        fixed.save(output)
+
+
+def _plot_lines(
+    stats_by_run: dict[str, list[dict]],
+    title: str,
+    xlabel: str,
+    metric: str,
+    output: Path,
+    fig_width_px: int,
+    fig_height_px: int,
+    fig_dpi: int,
+) -> None:
     plot_style.apply()
     first_stats = next(iter(stats_by_run.values()))
     if first_stats and "bin_label" in first_stats[0]:
@@ -405,7 +436,7 @@ def _plot_lines(stats_by_run: dict[str, list[dict]], title: str, xlabel: str, me
         labels = [f"{int(row['offset_steps']):+d}" if xlabel == "Signed offset steps" else str(int(row["offset_steps"])) for row in first_stats]
     x = list(range(len(first_stats)))
 
-    fig, ax = plt.subplots(figsize=(max(5.6, len(first_stats) * 0.7), 4.1))
+    fig, ax = plt.subplots(figsize=_figsize(fig_width_px, fig_height_px, fig_dpi), dpi=fig_dpi)
     colors = plt.cm.tab10.colors
     for i, (run_name, stats) in enumerate(stats_by_run.items()):
         values = [math.nan if row["n"] == 0 else float(row[metric]) for row in stats]
@@ -443,8 +474,7 @@ def _plot_lines(stats_by_run: dict[str, list[dict]], title: str, xlabel: str, me
         borderaxespad=0.0,
     )
 
-    output.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(output)
+    _save_fixed_figure(fig, output, fig_width_px, fig_height_px, fig_dpi)
     plt.close(fig)
     print(f"Saved -> {output}")
 
@@ -475,7 +505,16 @@ def _write_stats_csv(path: Path, rows: list[dict]) -> None:
         writer.writerows(rows)
 
 
-def _write_dataset_outputs(records_by_run: dict[str, list[dict]], dataset: str, output_dir: Path, max_offset: int, metric: str) -> None:
+def _write_dataset_outputs(
+    records_by_run: dict[str, list[dict]],
+    dataset: str,
+    output_dir: Path,
+    max_offset: int,
+    metric: str,
+    fig_width_px: int,
+    fig_height_px: int,
+    fig_dpi: int,
+) -> None:
     label = DATASET_LABELS.get(dataset, dataset)
     signed_by_run, absolute_by_run = _standard_stats_by_run(records_by_run, dataset, max_offset)
     signed = [row for rows in signed_by_run.values() for row in rows]
@@ -492,6 +531,9 @@ def _write_dataset_outputs(records_by_run: dict[str, list[dict]], dataset: str, 
         "Signed offset steps",
         metric,
         output_dir / f"{dataset}_signed_offset_{suffix}.png",
+        fig_width_px,
+        fig_height_px,
+        fig_dpi,
     )
     _plot_lines(
         absolute_by_run,
@@ -499,6 +541,9 @@ def _write_dataset_outputs(records_by_run: dict[str, list[dict]], dataset: str, 
         "Absolute offset steps",
         metric,
         output_dir / f"{dataset}_absolute_offset_{suffix}.png",
+        fig_width_px,
+        fig_height_px,
+        fig_dpi,
     )
 
 
@@ -536,6 +581,9 @@ def _write_binned_outputs(
     metric: str,
     bins: list[dict],
     suffix_label: str,
+    fig_width_px: int,
+    fig_height_px: int,
+    fig_dpi: int,
 ) -> None:
     label = DATASET_LABELS.get(dataset, dataset)
     binned_by_run = _binned_stats_by_run(records_by_run, dataset, bins)
@@ -550,6 +598,9 @@ def _write_binned_outputs(
         "Absolute distance from touch",
         metric,
         output_dir / f"{dataset}_{suffix_label}_offset_{suffix}.png",
+        fig_width_px,
+        fig_height_px,
+        fig_dpi,
     )
 
 
@@ -559,14 +610,22 @@ def _plot_combined_grid(
     xlabel: str,
     metric: str,
     output: Path,
+    fig_width_px: int,
+    fig_height_px: int,
+    fig_dpi: int,
 ) -> None:
     if not stats_by_dataset:
         return
 
     plot_style.apply()
     n = len(stats_by_dataset)
-    fig_h = max(3.1, 2.6 * n)
-    fig, axes = plt.subplots(n, 1, figsize=(10.5, fig_h), squeeze=False)
+    fig, axes = plt.subplots(
+        n,
+        1,
+        figsize=_figsize(fig_width_px, fig_height_px, fig_dpi),
+        dpi=fig_dpi,
+        squeeze=False,
+    )
     colors = plt.cm.tab10.colors
     legend_handles: list[Line2D] = []
 
@@ -616,8 +675,7 @@ def _plot_combined_grid(
         ncol=min(3, len(handles)),
         frameon=False,
     )
-    output.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(output, bbox_inches="tight")
+    _save_fixed_figure(fig, output, fig_width_px, fig_height_px, fig_dpi)
     plt.close(fig)
     print(f"Saved -> {output}")
 
@@ -734,6 +792,12 @@ def main() -> None:
                         help="Do not include offset 0 in binned plots.")
     parser.add_argument("--combined-plot", action="store_true",
                         help="Also write one multi-panel plot across all requested datasets.")
+    parser.add_argument("--fig-width-px", type=int, default=DEFAULT_FIG_WIDTH_PX,
+                        help=f"Output figure width in pixels (default: {DEFAULT_FIG_WIDTH_PX}).")
+    parser.add_argument("--fig-height-px", type=int, default=DEFAULT_FIG_HEIGHT_PX,
+                        help=f"Output figure height in pixels (default: {DEFAULT_FIG_HEIGHT_PX}).")
+    parser.add_argument("--fig-dpi", type=int, default=DEFAULT_FIG_DPI,
+                        help=f"Output figure DPI used to convert pixels to inches (default: {DEFAULT_FIG_DPI}).")
     parser.add_argument(
         "--metric",
         choices=METRICS,
@@ -789,7 +853,16 @@ def main() -> None:
         }
         standard_records = {run_name: records for run_name, records in standard_records.items() if records}
         if standard_records:
-            _write_dataset_outputs(standard_records, dataset, args.output_dir, args.max_offset, args.metric)
+            _write_dataset_outputs(
+                standard_records,
+                dataset,
+                args.output_dir,
+                args.max_offset,
+                args.metric,
+                args.fig_width_px,
+                args.fig_height_px,
+                args.fig_dpi,
+            )
             if args.combined_plot:
                 signed_by_run, absolute_by_run = _standard_stats_by_run(standard_records, dataset, args.max_offset)
                 combined_signed[dataset] = signed_by_run
@@ -799,7 +872,17 @@ def main() -> None:
             ranges = _balanced_bins(records_by_run, args.balanced_bins)
             if ranges:
                 bins = _make_plot_bins(ranges, symmetric=not args.combined_bins, include_zero=not args.no_zero_bin)
-                _write_binned_outputs(records_by_run, dataset, args.output_dir, args.metric, bins, "balanced_binned")
+                _write_binned_outputs(
+                    records_by_run,
+                    dataset,
+                    args.output_dir,
+                    args.metric,
+                    bins,
+                    "balanced_binned",
+                    args.fig_width_px,
+                    args.fig_height_px,
+                    args.fig_dpi,
+                )
                 if args.combined_plot:
                     combined_binned[dataset] = _binned_stats_by_run(records_by_run, dataset, bins)
                     combined_binned_label = "balanced_binned"
@@ -808,7 +891,17 @@ def main() -> None:
         elif args.distance_bins:
             ranges = _parse_distance_bins(args.distance_bins)
             bins = _make_plot_bins(ranges, symmetric=not args.combined_bins, include_zero=not args.no_zero_bin)
-            _write_binned_outputs(records_by_run, dataset, args.output_dir, args.metric, bins, "binned")
+            _write_binned_outputs(
+                records_by_run,
+                dataset,
+                args.output_dir,
+                args.metric,
+                bins,
+                "binned",
+                args.fig_width_px,
+                args.fig_height_px,
+                args.fig_dpi,
+            )
             if args.combined_plot:
                 combined_binned[dataset] = _binned_stats_by_run(records_by_run, dataset, bins)
                 combined_binned_label = "binned"
@@ -820,6 +913,9 @@ def main() -> None:
             "Signed offset steps",
             args.metric,
             args.output_dir / f"combined_signed_offset_{suffix}.png",
+            args.fig_width_px,
+            args.fig_height_px,
+            args.fig_dpi,
         )
         _plot_combined_grid(
             combined_absolute,
@@ -827,6 +923,9 @@ def main() -> None:
             "Absolute offset steps",
             args.metric,
             args.output_dir / f"combined_absolute_offset_{suffix}.png",
+            args.fig_width_px,
+            args.fig_height_px,
+            args.fig_dpi,
         )
         if combined_binned and combined_binned_label:
             _plot_combined_grid(
@@ -835,6 +934,9 @@ def main() -> None:
                 "Distance from touch",
                 args.metric,
                 args.output_dir / f"combined_{combined_binned_label}_offset_{suffix}.png",
+                args.fig_width_px,
+                args.fig_height_px,
+                args.fig_dpi,
             )
 
 
