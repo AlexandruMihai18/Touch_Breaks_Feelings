@@ -363,6 +363,23 @@ def main() -> None:
             f"  F1:        {f1:.4f}",
             f"  Accuracy:  {accuracy:.4f}",
         ]
+        pt_stats_path = out_dir / "point_heatmap_stats.json"
+        if pt_stats_path.exists():
+            import json as _json
+            pt = _json.loads(pt_stats_path.read_text())
+            rmse = pt.get("rmse_norm", float("nan"))
+            n_masked = pt.get("n_masked", 0)
+            n_total = pt.get("n", 0)
+            mask_mode = pt.get("mask_mode", "zero_coord")
+            mode_label = "zero-coord" if mask_mode == "zero_coord" else "no-touch-pred"
+            gm_lines += [
+                "",
+                "Point Touch RMSE",
+                f"  Mask mode: {mask_mode}",
+                f"  RMSE (norm, {n_masked} {mode_label} masked): {rmse:.4f}",
+                f"  N evaluated: {n_total - n_masked}  (of {n_total} total)",
+            ]
+
         gm_path = out_dir / "global_metrics.txt"
         gm_path.write_text("\n".join(gm_lines) + "\n")
         _tee("\nGlobal Metrics", log)

@@ -8,22 +8,28 @@ are integer cell indices in [0, N) produced by annotate_touch_zones.py.
 
 Distance metric
 ---------------
-We discretize only the GT side (cell index from annotation).  The predicted
-pixel point is compared against the centroid of the GT cell in pixel space:
+All coordinates are normalized to [0, 1] before comparison so the metric is
+independent of image resolution and model input size:
 
-    error_px = ||pred_point - centroid(GT_cell)||₂
+  * Qwen models output x_touch / y_touch already in [0, 1].
+  * DINO models output pixel coordinates; these are divided by the original
+    image dimensions to normalize.
 
-This avoids double-discretization noise: a prediction just outside the correct
-cell has the same error as one near the GT centroid, which would be invisible if
-we snapped both to cell centroids.  The metric is in pixels and independent of
-grid size.
+The GT cell centroid is computed as ((x_gt + 0.5) / grid, (y_gt + 0.5) / grid),
+also in [0, 1].  The error per sample is the joint 2-D Euclidean distance
+between the normalized predicted point and the GT cell centroid:
+
+    error_norm = ||(x_pred_norm, y_pred_norm) - (cx_norm, cy_norm)||₂
+
+This avoids double-discretization noise and is directly comparable across
+models regardless of their input resolution.
 
 Two outputs
 -----------
   <stem>_hit_rate.png   — per-GT-cell fraction of predictions landing in the
                           exact correct cell (hit@1)
-  <stem>_mean_error.png — per-GT-cell mean pixel distance from prediction to
-                          GT cell centroid (lower = better)
+  <stem>_mean_error.png — per-GT-cell mean normalized error (→ GT centroid,
+                          lower = better; range [0, √2])
 
 Usage
 -----
@@ -37,6 +43,7 @@ Usage
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -63,17 +70,6 @@ def _image_size(frame_path: str) -> tuple[int, int]:
     return _size_cache[frame_path]
 
 
-# ── Grid helpers ──────────────────────────────────────────────────────────────
-
-def _px_to_cell(px: float, dim: int, grid: int) -> int:
-    return min(int(px / dim * grid), grid - 1)
-
-
-def _cell_centroid_px(cell: int, dim: int, grid: int) -> float:
-    """Pixel coordinate of the centre of a grid cell."""
-    return (cell + 0.5) / grid * dim
-
-
 # ── Per-row computation ───────────────────────────────────────────────────────
 
 def _augment_row(
@@ -83,14 +79,24 @@ def _augment_row(
     x_gt: int,
     y_gt: int,
     grid: int,
+    pred_normalized: bool = False,
 ) -> tuple[int, int, float]:
-    """Return (x_pred_cell, y_pred_cell, error_px)."""
-    w, h = _image_size(frame_path)
-    xc = _px_to_cell(x_pred, w, grid)
-    yc = _px_to_cell(y_pred, h, grid)
-    cx = _cell_centroid_px(x_gt, w, grid)
-    cy = _cell_centroid_px(y_gt, h, grid)
-    err = float(np.sqrt((x_pred - cx) ** 2 + (y_pred - cy) ** 2))
+    """Return (x_pred_cell, y_pred_cell, error_norm).
+
+    error_norm is the joint 2-D Euclidean distance in normalized [0, 1] space
+    between the predicted point and the GT cell centroid.
+    """
+    if pred_normalized:
+        x_n, y_n = x_pred, y_pred
+    else:
+        w, h = _image_size(frame_path)
+        x_n = x_pred / w
+        y_n = y_pred / h
+    cx_n = (x_gt + 0.5) / grid
+    cy_n = (y_gt + 0.5) / grid
+    xc = max(0, min(int(x_n * grid), grid - 1))
+    yc = max(0, min(int(y_n * grid), grid - 1))
+    err = float(np.sqrt((x_n - cx_n) ** 2 + (y_n - cy_n) ** 2))
     return xc, yc, err
 
 
@@ -100,7 +106,7 @@ def _compute_grids(
     df: pd.DataFrame,
     grid: int,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Return (hit_rate, mean_error_px, count) arrays shaped (grid, grid).
+    """Return (hit_rate, mean_error_norm, count) arrays shaped (grid, grid).
 
     Indexed as [y, x] — row y=0 is the top of the image.
     """
@@ -116,7 +122,7 @@ def _compute_grids(
         count[y, x]    = n
         hits           = (grp["x_pred_cell"] == x) & (grp["y_pred_cell"] == y)
         hit_rate[y, x] = hits.sum() / n
-        mean_err[y, x] = grp["error_px"].mean()
+        mean_err[y, x] = grp["error_norm"].mean()
 
     return hit_rate, mean_err, count
 
@@ -211,6 +217,14 @@ def main() -> None:
         help="Base output path; _hit_rate.png and _mean_error.png are appended "
              "(default: <csv_stem>_point_heatmap next to the CSV)",
     )
+    parser.add_argument(
+        "--mask-mode", choices=["auto", "zero_coord", "predicted_touch"], default="auto",
+        help="How to mask rows before computing RMSE. "
+             "zero_coord: exclude x_pred=0 & y_pred=0 (Qwen models). "
+             "predicted_touch: only include rows with prediction==1 (DINO models). "
+             "auto (default): infers zero_coord when 'qwen' is in the CSV name, "
+             "predicted_touch otherwise.",
+    )
     args = parser.parse_args()
 
     if not args.csv.exists():
@@ -244,7 +258,13 @@ def main() -> None:
         sys.exit(1)
     print(f"  Rows with GT cell indices  : {len(df):,}")
 
-    # ── Convert pixel predictions to grid cells + compute error ───────────────
+    # ── Resolve mask mode before augmentation (determines coordinate handling) ─
+    mask_mode = args.mask_mode
+    if mask_mode == "auto":
+        mask_mode = "zero_coord" if "qwen" in args.csv.name.lower() else "predicted_touch"
+    pred_normalized = mask_mode == "zero_coord"  # Qwen outputs [0,1]; DINO outputs pixels
+
+    # ── Map predictions to grid cells and compute normalized error ────────────
     results = []
     skipped = 0
     for _, row in df.iterrows():
@@ -256,6 +276,7 @@ def main() -> None:
                 int(row["x_gt"]),
                 int(row["y_gt"]),
                 args.grid,
+                pred_normalized=pred_normalized,
             )
             results.append((xc, yc, err))
         except Exception as exc:
@@ -264,8 +285,8 @@ def main() -> None:
 
     df["x_pred_cell"] = [r[0] for r in results]
     df["y_pred_cell"] = [r[1] for r in results]
-    df["error_px"]    = [r[2] for r in results]
-    df = df.dropna(subset=["x_pred_cell", "y_pred_cell", "error_px"])
+    df["error_norm"]  = [r[2] for r in results]
+    df = df.dropna(subset=["x_pred_cell", "y_pred_cell", "error_norm"])
     df["x_pred_cell"] = df["x_pred_cell"].astype(int)
     df["y_pred_cell"] = df["y_pred_cell"].astype(int)
 
@@ -276,17 +297,42 @@ def main() -> None:
     n = len(df)
     hit1 = (df["x_pred_cell"] == df["x_gt"]) & (df["y_pred_cell"] == df["y_gt"])
 
-    print(f"\n  Results  (n={n:,},  grid={args.grid}×{args.grid})")
+    print(f"\n  Results  (n={n:,},  grid={args.grid}×{args.grid},  coords=normalized [0,1])")
     print(f"    Hit@1  (exact cell match)            : "
           f"{hit1.mean():.3f}  ({hit1.sum()}/{n})")
-    print(f"    Mean pixel error  (→ GT centroid)    : {df['error_px'].mean():.1f} px")
-    print(f"    Median pixel error                   : {df['error_px'].median():.1f} px")
+    print(f"    Mean error  (→ GT centroid)          : {df['error_norm'].mean():.4f}")
+    print(f"    Median error                         : {df['error_norm'].median():.4f}")
+
+    if mask_mode == "zero_coord":
+        rmse_keep = ~((df["x_pred"] == 0.0) & (df["y_pred"] == 0.0))
+    else:  # predicted_touch
+        rmse_keep = pd.to_numeric(df.get("prediction"), errors="coerce").fillna(0) == 1
+
+    df_rmse = df[rmse_keep]
+    rmse = float(np.sqrt((df_rmse["error_norm"] ** 2).mean())) if not df_rmse.empty else float("nan")
+    n_masked = int((~rmse_keep).sum())
+    mode_label = "zero-coord" if mask_mode == "zero_coord" else "no-touch-pred"
+    print(f"    RMSE ({n_masked} {mode_label} masked)          : {rmse:.4f}")
 
     # ── Per-cell grids ────────────────────────────────────────────────────────
     hit_rate, mean_err, cell_count = _compute_grids(df, args.grid)
 
     base = args.output or args.csv.with_name(args.csv.stem + "_point_heatmap")
     base = Path(base)
+
+    stats = {
+        "hit_at_1":         float(hit1.mean()),
+        "mean_error_norm":  float(df["error_norm"].mean()),
+        "median_error_norm": float(df["error_norm"].median()),
+        "rmse_norm":        rmse,
+        "n":                n,
+        "n_masked":         n_masked,
+        "mask_mode":        mask_mode,
+        "grid":             args.grid,
+    }
+    stats_path = base.with_name(base.stem + "_stats.json")
+    stats_path.write_text(json.dumps(stats, indent=2))
+    print(f"  Saved → {stats_path}")
 
     _plot_heatmap(
         hit_rate, cell_count,
@@ -299,15 +345,15 @@ def main() -> None:
     )
 
     p90 = float(np.nanpercentile(mean_err[~np.isnan(mean_err)], 90)) \
-          if not np.all(np.isnan(mean_err)) else 100.0
+          if not np.all(np.isnan(mean_err)) else 0.5
     _plot_heatmap(
         mean_err, cell_count,
-        title="Touch-point regression — mean pixel error\n(predicted point → GT cell centroid)",
-        cbar_label="Mean error (px)",
+        title="Touch-point regression — mean error (normalized)\n(predicted point → GT cell centroid)",
+        cbar_label="Mean error (norm, [0–√2])",
         output_path=base.with_name(base.stem + "_mean_error.png"),
         cmap_name="RdYlGn_r",
         vmin=0.0, vmax=p90,
-        fmt="{:.0f}",
+        fmt="{:.3f}",
     )
 
 
