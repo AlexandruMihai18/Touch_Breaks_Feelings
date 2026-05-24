@@ -193,112 +193,136 @@ def main() -> None:
 
     # ── 1. Depth ──────────────────────────────────────────────────────────────
     if "depth" not in skipped:
-        out = out_dir / _OUTPUTS["depth"]
-        metric_args = ["--all-metrics"] if all_m else ["--metric", args.depth_metric]
-        ok = _run(
-            [py, str(_SCRIPTS["depth"]),
-             str(args.csv),
-             *metric_args,
-             "--output", str(out),
-             *ann_args],
-            "depth", log,
-        )
-        results["depth"] = str(out_dir / "depth_performance_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
+        try:
+            out = out_dir / _OUTPUTS["depth"]
+            metric_args = ["--all-metrics"] if all_m else ["--metric", args.depth_metric]
+            ok = _run(
+                [py, str(_SCRIPTS["depth"]),
+                 str(args.csv),
+                 *metric_args,
+                 "--output", str(out),
+                 *ann_args],
+                "depth", log,
+            )
+            results["depth"] = str(out_dir / "depth_performance_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
+        except Exception as exc:
+            _tee(f"  [ERROR] depth raised {exc!r}", log)
+            results["depth"] = f"ERROR: {exc}"
     else:
         results["depth"] = "SKIPPED"
 
     # ── 2. Object clusters ────────────────────────────────────────────────────
     if "object" not in skipped:
-        if args.clusters is None or not args.clusters.exists():
-            _tee("\n[SKIP] object eval — --clusters not provided or file not found.", log)
-            results["object"] = "SKIPPED (no --clusters)"
-        else:
-            out = out_dir / _OUTPUTS["object"]
-            metric_args = ["--all-metrics"] if all_m else ["--metric", args.object_metric]
-            ok = _run(
-                [py, str(_SCRIPTS["object"]),
-                 str(args.csv),
-                 "--clusters", str(args.clusters),
-                 *metric_args,
-                 "--output",   str(out),
-                 *ann_args],
-                "object", log,
-            )
-            results["object"] = str(out_dir / "object_performance_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
+        try:
+            if args.clusters is None or not args.clusters.exists():
+                _tee("\n[SKIP] object eval — --clusters not provided or file not found.", log)
+                results["object"] = "SKIPPED (no --clusters)"
+            else:
+                out = out_dir / _OUTPUTS["object"]
+                metric_args = ["--all-metrics"] if all_m else ["--metric", args.object_metric]
+                ok = _run(
+                    [py, str(_SCRIPTS["object"]),
+                     str(args.csv),
+                     "--clusters", str(args.clusters),
+                     *metric_args,
+                     "--output",   str(out),
+                     *ann_args],
+                    "object", log,
+                )
+                results["object"] = str(out_dir / "object_performance_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
+        except Exception as exc:
+            _tee(f"  [ERROR] object raised {exc!r}", log)
+            results["object"] = f"ERROR: {exc}"
     else:
         results["object"] = "SKIPPED"
 
     # ── 3. Coverage ───────────────────────────────────────────────────────────
     if "coverage" not in skipped:
-        out = out_dir / _OUTPUTS["coverage"]
-        metric_args = ["--all-metrics"] if all_m else ["--metric", args.coverage_metric]
-        ok = _run(
-            [py, str(_SCRIPTS["coverage"]),
-             str(args.csv),
-             *metric_args,
-             "--output",  str(out),
-             *ann_args],
-            "coverage", log,
-        )
-        results["coverage"] = str(out_dir / "coverage_performance_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
+        try:
+            out = out_dir / _OUTPUTS["coverage"]
+            metric_args = ["--all-metrics"] if all_m else ["--metric", args.coverage_metric]
+            ok = _run(
+                [py, str(_SCRIPTS["coverage"]),
+                 str(args.csv),
+                 *metric_args,
+                 "--output",  str(out),
+                 *ann_args],
+                "coverage", log,
+            )
+            results["coverage"] = str(out_dir / "coverage_performance_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
+        except Exception as exc:
+            _tee(f"  [ERROR] coverage raised {exc!r}", log)
+            results["coverage"] = f"ERROR: {exc}"
     else:
         results["coverage"] = "SKIPPED"
 
     # ── 4. Touch zones ────────────────────────────────────────────────────────
     if "zones" not in skipped:
-        out = out_dir / _OUTPUTS["zones"]
-        metric_args = ["--all-metrics"] if all_m else ["--metric", args.zones_metric]
-        ok = _run(
-            [py, str(_SCRIPTS["zones"]),
-             str(args.csv),
-             "--grid",   str(args.grid),
-             *metric_args,
-             "--output", str(out),
-             *ann_args],
-            "zones", log,
-        )
-        results["zones"] = str(out_dir / "grid_heatmap_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
+        try:
+            out = out_dir / _OUTPUTS["zones"]
+            metric_args = ["--all-metrics"] if all_m else ["--metric", args.zones_metric]
+            ok = _run(
+                [py, str(_SCRIPTS["zones"]),
+                 str(args.csv),
+                 "--grid",   str(args.grid),
+                 *metric_args,
+                 "--output", str(out),
+                 *ann_args],
+                "zones", log,
+            )
+            results["zones"] = str(out_dir / "grid_heatmap_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
+        except Exception as exc:
+            _tee(f"  [ERROR] zones raised {exc!r}", log)
+            results["zones"] = f"ERROR: {exc}"
     else:
         results["zones"] = "SKIPPED"
 
     # ── 5. Touch-point regression zones ──────────────────────────────────────
     if "point_zones" not in skipped:
-        import pandas as pd
-        _x = pd.to_numeric(
-            pd.read_csv(args.csv, usecols=["x_touch"])["x_touch"],
-            errors="coerce",
-        )
-        if not _x.notna().any():
-            _tee("\n[SKIP] point_zones — no predicted x_touch/y_touch coords in CSV", log)
-            results["point_zones"] = "SKIPPED (no point predictions)"
-        else:
-            out = out_dir / _OUTPUTS["point_zones"]
-            ok = _run(
-                [py, str(_SCRIPTS["point_zones"]),
-                 str(args.csv),
-                 "--grid",   str(args.grid),
-                 "--output", str(out),
-                 *ann_args],
-                "point_zones", log,
+        try:
+            import pandas as pd
+            _x = pd.to_numeric(
+                pd.read_csv(args.csv, usecols=["x_touch"])["x_touch"],
+                errors="coerce",
             )
-            results["point_zones"] = str(out.with_name(out.name + "_hit_rate.png")) if ok else "FAILED"
+            if not _x.notna().any():
+                _tee("\n[SKIP] point_zones — no predicted x_touch/y_touch coords in CSV", log)
+                results["point_zones"] = "SKIPPED (no point predictions)"
+            else:
+                out = out_dir / _OUTPUTS["point_zones"]
+                ok = _run(
+                    [py, str(_SCRIPTS["point_zones"]),
+                     str(args.csv),
+                     "--grid",   str(args.grid),
+                     "--output", str(out),
+                     *ann_args],
+                    "point_zones", log,
+                )
+                results["point_zones"] = str(out.with_name(out.name + "_hit_rate.png")) if ok else "FAILED"
+        except Exception as exc:
+            _tee(f"  [ERROR] point_zones raised {exc!r}", log)
+            results["point_zones"] = f"ERROR: {exc}"
     else:
         results["point_zones"] = "SKIPPED"
 
     # ── 6. Failure sampling ───────────────────────────────────────────────────
     if "failures" not in skipped:
-        dataset_args = ["--dataset", args.dataset] if args.dataset else []
-        ok = _run(
-            [py, str(_SCRIPTS["failures"]),
-             str(args.csv),
-             "--output-dir", str(out_dir),
-             "--n-samples",  str(args.n_samples),
-             "--seed",       str(args.failures_seed),
-             *dataset_args,
-             *ann_args],
-            "failures", log,
-        )
-        results["failures"] = str(out_dir / "depth_failures") + ", " + str(out_dir / "object_size_failures") if ok else "FAILED"
+        try:
+            dataset_args = ["--dataset", args.dataset] if args.dataset else []
+            ok = _run(
+                [py, str(_SCRIPTS["failures"]),
+                 str(args.csv),
+                 "--output-dir", str(out_dir),
+                 "--n-samples",  str(args.n_samples),
+                 "--seed",       str(args.failures_seed),
+                 *dataset_args,
+                 *ann_args],
+                "failures", log,
+            )
+            results["failures"] = str(out_dir / "depth_failures") + ", " + str(out_dir / "object_size_failures") if ok else "FAILED"
+        except Exception as exc:
+            _tee(f"  [ERROR] failures raised {exc!r}", log)
+            results["failures"] = f"ERROR: {exc}"
     else:
         results["failures"] = "SKIPPED"
 
