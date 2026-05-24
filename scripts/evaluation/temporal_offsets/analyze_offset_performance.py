@@ -66,6 +66,11 @@ DEFAULT_DISTANCE_BINS = "1-4,5-10,11-20"
 DEFAULT_FIG_WIDTH_PX = 1600
 DEFAULT_FIG_HEIGHT_PX = 1000
 DEFAULT_FIG_DPI = 200
+PLOT_RECT = [0.12, 0.24, 0.78, 0.60]
+COMBINED_LEFT = 0.12
+COMBINED_RIGHT = 0.90
+COMBINED_BOTTOM = 0.18
+COMBINED_TOP = 0.90
 
 _FRAME_NUM_RE = re.compile(r"(?:frame_)?(\d+)(?:\.[^.]+)?$")
 
@@ -429,6 +434,7 @@ def _plot_lines(
     fig_dpi: int,
 ) -> None:
     plot_style.apply()
+    plt.rcParams["figure.constrained_layout.use"] = False
     first_stats = next(iter(stats_by_run.values()))
     if first_stats and "bin_label" in first_stats[0]:
         labels = [str(row["bin_label"]) for row in first_stats]
@@ -436,7 +442,8 @@ def _plot_lines(
         labels = [f"{int(row['offset_steps']):+d}" if xlabel == "Signed offset steps" else str(int(row["offset_steps"])) for row in first_stats]
     x = list(range(len(first_stats)))
 
-    fig, ax = plt.subplots(figsize=_figsize(fig_width_px, fig_height_px, fig_dpi), dpi=fig_dpi)
+    fig = plt.figure(figsize=_figsize(fig_width_px, fig_height_px, fig_dpi), dpi=fig_dpi)
+    ax = fig.add_axes(PLOT_RECT)
     colors = plt.cm.tab10.colors
     for i, (run_name, stats) in enumerate(stats_by_run.items()):
         values = [math.nan if row["n"] == 0 else float(row[metric]) for row in stats]
@@ -469,7 +476,7 @@ def _plot_lines(
         handles,
         labels_legend,
         loc="upper center",
-        bbox_to_anchor=(0.5, -0.22),
+        bbox_to_anchor=(0.5, -0.24),
         ncol=min(3, len(handles)),
         borderaxespad=0.0,
     )
@@ -618,6 +625,7 @@ def _plot_combined_grid(
         return
 
     plot_style.apply()
+    plt.rcParams["figure.constrained_layout.use"] = False
     n = len(stats_by_dataset)
     fig, axes = plt.subplots(
         n,
@@ -625,6 +633,13 @@ def _plot_combined_grid(
         figsize=_figsize(fig_width_px, fig_height_px, fig_dpi),
         dpi=fig_dpi,
         squeeze=False,
+    )
+    fig.subplots_adjust(
+        left=COMBINED_LEFT,
+        right=COMBINED_RIGHT,
+        bottom=COMBINED_BOTTOM,
+        top=COMBINED_TOP,
+        hspace=0.55,
     )
     colors = plt.cm.tab10.colors
     legend_handles: list[Line2D] = []
