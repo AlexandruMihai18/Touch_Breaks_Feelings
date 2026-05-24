@@ -220,16 +220,17 @@ def _merge_one(spec: dict, dry_run: bool) -> bool:
     if point_path:
         pt_df = pd.read_csv(point_path)
         path_col = _detect_path_col(pt_df, str(point_path))
-        # include frame_id only if binary didn't already supply it
-        has_frame_id_from_binary = binary_path and "frame_id" in frames[0][1].columns
-        pt_keep = [c for c in ["frame_id", path_col, "x_touch", "y_touch"] if c in pt_df.columns]
-        if has_frame_id_from_binary and "frame_id" in pt_keep:
-            pt_keep.remove("frame_id")
-        pt_df = pt_df[pt_keep].rename(columns={path_col: "frame_path"})
+        # drop frame_path from point — it may differ from binary's path root;
+        # we keep frame_path from the binary CSV and join on frame_id instead.
+        pt_keep = [c for c in ["frame_id", "x_touch", "y_touch"] if c in pt_df.columns]
+        pt_df = pt_df[pt_keep]
         frames.append(("point", pt_df))
 
     if len(frames) == 2:
-        merged = frames[0][1].merge(frames[1][1], on="frame_path", how="inner")
+        bin_df, pt_df = frames[0][1], frames[1][1]
+        # prefer frame_id as join key; fall back to frame_path if frame_id absent
+        join_key = "frame_id" if "frame_id" in bin_df.columns and "frame_id" in pt_df.columns else "frame_path"
+        merged = bin_df.merge(pt_df, on=join_key, how="inner")
     else:
         merged = frames[0][1]
 
