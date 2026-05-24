@@ -326,6 +326,52 @@ def main() -> None:
     else:
         results["failures"] = "SKIPPED"
 
+    # ── Global metrics ────────────────────────────────────────────────────────
+    try:
+        import pandas as pd
+
+        df = pd.read_csv(args.csv, usecols=["label", "prediction"])
+        df["label"]      = pd.to_numeric(df["label"],      errors="coerce")
+        df["prediction"] = pd.to_numeric(df["prediction"], errors="coerce")
+        df = df.dropna(subset=["label", "prediction"])
+
+        tp = int(((df["label"] == 1) & (df["prediction"] == 1)).sum())
+        tn = int(((df["label"] == 0) & (df["prediction"] == 0)).sum())
+        fp = int(((df["label"] == 0) & (df["prediction"] == 1)).sum())
+        fn = int(((df["label"] == 1) & (df["prediction"] == 0)).sum())
+
+        precision = tp / (tp + fp) if (tp + fp) > 0 else float("nan")
+        recall    = tp / (tp + fn) if (tp + fn) > 0 else float("nan")
+        f1        = (2 * precision * recall / (precision + recall)
+                     if (precision + recall) > 0 else float("nan"))
+        accuracy  = (tp + tn) / len(df) if len(df) > 0 else float("nan")
+
+        gm_lines = [
+            f"Run: {run_name}",
+            f"CSV: {args.csv}",
+            "",
+            "Confusion Matrix",
+            f"  TP: {tp}",
+            f"  TN: {tn}",
+            f"  FP: {fp}",
+            f"  FN: {fn}",
+            f"  Total: {len(df)}",
+            "",
+            "Global Metrics",
+            f"  Precision: {precision:.4f}",
+            f"  Recall:    {recall:.4f}",
+            f"  F1:        {f1:.4f}",
+            f"  Accuracy:  {accuracy:.4f}",
+        ]
+        gm_path = out_dir / "global_metrics.txt"
+        gm_path.write_text("\n".join(gm_lines) + "\n")
+        _tee("\nGlobal Metrics", log)
+        for line in gm_lines[3:]:
+            _tee(line, log)
+        _tee(f"\n  Global metrics → {gm_path}", log)
+    except Exception as exc:
+        _tee(f"  [WARN] could not compute global metrics: {exc!r}", log)
+
     # ── Summary ───────────────────────────────────────────────────────────────
     _tee(f"\n{'═' * 60}", log)
     _tee(f"  Evaluation complete — run: {run_name}", log)
