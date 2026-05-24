@@ -4,6 +4,8 @@ Applies in order:
   1. annotate_touch_depth      → depth_touch
   2. annotate_touch_zones      → x_touch, y_touch
   3. annotate_object_coverage  → object_coverage
+                                   (Kubric also gets object1_coverage,
+                                    object2_coverage when masks are present)
   4. annotate_object_classes   → general_class, gh_class
      (only when --clusters-dir is provided or cluster JSONs are found under
       <data_root>/epic_kitchen/)
@@ -11,6 +13,7 @@ Applies in order:
 Datasets (train + val splits):
   - <data_root>/greatest_hits/annotations/
   - <data_root>/epic_kitchen/annotations/
+  - <data_root>/kubric/annotations/
 
 --data-root defaults to the repo's data/ directory; override to use scratch:
     --data-root /scratch-shared/$USER
@@ -18,7 +21,7 @@ Datasets (train + val splits):
 Usage
 -----
     python scripts/evaluation/run_all_annotations.py [--force] [--dry-run]
-    python scripts/evaluation/run_all_annotations.py --datasets gh ek [--force]
+    python scripts/evaluation/run_all_annotations.py --datasets gh ek kubric [--force]
     python scripts/evaluation/run_all_annotations.py --data-root /scratch-shared/$USER
     python scripts/evaluation/run_all_annotations.py --data-root /scratch-shared/$USER \\
         --clusters-dir /scratch-shared/$USER/epic_kitchen
@@ -37,6 +40,7 @@ from object_classes.annotate_object_classes import annotate_file as annotate_cla
 DATASET_SUBDIRS = {
     "gh": Path("greatest_hits/annotations"),
     "ek": Path("epic_kitchen/annotations"),
+    "kubric": Path("kubric/annotations"),
 }
 
 SPLITS = ["train.json", "val.json"]
@@ -94,16 +98,19 @@ def main() -> None:
         _classes_fn = None
         print(f"[SKIP] object-class annotation — cluster JSONs not found in {clusters_dir}")
 
-    annotators = [
-        ("depth_touch",      lambda p: annotate_depth(p, args.force, args.dry_run)),
-        ("x/y_touch",        lambda p: annotate_zones(p, args.grid, args.min_blob_area, args.force, args.dry_run)),
-        ("object_coverage",  lambda p: annotate_coverage(p, args.force, args.dry_run)),
-        *([("general/gh_class", _classes_fn)] if _classes_fn else []),
-    ]
-
     for ds_key in args.datasets:
         ds_dir = data_root / DATASET_SUBDIRS[ds_key]
         _header(f"Dataset: {ds_key}  ({ds_dir})")
+
+        annotators = [
+            ("depth_touch",      lambda p: annotate_depth(p, args.force, args.dry_run)),
+            ("x/y_touch",        lambda p: annotate_zones(p, args.grid, args.min_blob_area, args.force, args.dry_run)),
+            ("object_coverage",  lambda p: annotate_coverage(p, args.force, args.dry_run)),
+        ]
+        if ds_key != "kubric" and _classes_fn:
+            annotators.append(("general/gh_class", _classes_fn))
+        elif ds_key == "kubric":
+            print("  [SKIP] object-class annotation — not applicable to Kubric")
 
         for split in SPLITS:
             path = ds_dir / split
