@@ -7,9 +7,11 @@ JSON by sorting each video by frame_idx and measuring row distance to the
 nearest touch row.  For Kubric, offset 0 comes from touch rows and nonzero
 offsets come from kubric.hard_negative_offsets on no-touch rows.
 
-The plotted metric is intentionally class-specific:
+By default, the plotted metric is class-specific:
   * offset 0: false negative rate on touch frames
   * nonzero offsets: false positive rate on no-touch context frames
+
+Use --metric f1 to plot binary F1 per offset bin instead.
 
 Usage
 -----
@@ -18,6 +20,7 @@ Usage
         --datasets gh ek kubric \\
         --data-root /gpfs/scratch1/shared/dotero \\
         --split val \\
+        --metric error \\
         --output-dir results/evaluation/temporal_offsets
 """
 
@@ -50,6 +53,8 @@ DATASET_LABELS = {
     "ek": "EPIC Kitchen",
     "kubric": "Kubric",
 }
+
+METRICS = ["error", "accuracy", "precision", "recall", "f1"]
 
 _FRAME_NUM_RE = re.compile(r"(?:frame_)?(\d+)(?:\.[^.]+)?$")
 
@@ -303,19 +308,7 @@ def _signed_stats(records: list[dict], dataset: str, max_offset: int) -> list[di
     rows = []
     for offset in range(-max_offset, max_offset + 1):
         group = [r for r in records if r["offset_steps"] == offset]
-        n = len(group)
-        errors = sum(int(r["error"]) for r in group) if n else 0
-        rows.append(
-            {
-                "dataset": dataset,
-                "offset_steps": offset,
-                "offset_abs": abs(offset),
-                "n": n,
-                "errors": errors,
-                "error_rate": errors / n if n else math.nan,
-                "metric_type": "fn_rate" if offset == 0 else "fp_rate",
-            }
-        )
+        rows.append(_metric_row(dataset, offset, abs(offset), group))
     return rows
 
 
@@ -323,41 +316,69 @@ def _absolute_stats(records: list[dict], dataset: str, max_offset: int) -> list[
     rows = []
     for offset_abs in range(0, max_offset + 1):
         group = [r for r in records if r["offset_abs"] == offset_abs]
-        n = len(group)
-        errors = sum(int(r["error"]) for r in group) if n else 0
-        rows.append(
-            {
-                "dataset": dataset,
-                "offset_steps": offset_abs,
-                "offset_abs": offset_abs,
-                "n": n,
-                "errors": errors,
-                "error_rate": errors / n if n else math.nan,
-                "metric_type": "fn_rate" if offset_abs == 0 else "fp_rate",
-            }
-        )
+        rows.append(_metric_row(dataset, offset_abs, offset_abs, group))
     return rows
 
 
-def _plot_bars(stats: list[dict], title: str, xlabel: str, output: Path) -> None:
+def _binary_metrics(group: list[dict]) -> dict[str, float]:
+    n = len(group)
+    if n == 0:
+        return {metric: math.nan for metric in METRICS}
+
+    tp = sum(r["label"] == 1 and r["prediction"] == 1 for r in group)
+    tn = sum(r["label"] == 0 and r["prediction"] == 0 for r in group)
+    fp = sum(r["label"] == 0 and r["prediction"] == 1 for r in group)
+    fn = sum(r["label"] == 1 and r["prediction"] == 0 for r in group)
+
+    precision = tp / (tp + fp) if tp + fp else 0.0
+    recall = tp / (tp + fn) if tp + fn else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+    return {
+        "error": (fp + fn) / n,
+        "accuracy": (tp + tn) / n,
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+    }
+
+
+def _metric_row(dataset: str, offset_steps: int, offset_abs: int, group: list[dict]) -> dict:
+    n = len(group)
+    errors = sum(int(r["error"]) for r in group) if n else 0
+    return {
+        "dataset": dataset,
+        "offset_steps": offset_steps,
+        "offset_abs": offset_abs,
+        "n": n,
+        "errors": errors,
+        "error_rate": errors / n if n else math.nan,
+        "metric_type": "fn_rate" if offset_abs == 0 else "fp_rate",
+        **_binary_metrics(group),
+    }
+
+
+def _plot_bars(stats: list[dict], title: str, xlabel: str, metric: str, output: Path) -> None:
     plot_style.apply()
     x = list(range(len(stats)))
-    rates = [float(row["error_rate"]) for row in stats]
-    colors = [plot_style.C_FN if row["metric_type"] == "fn_rate" else plot_style.C_FP for row in stats]
+    values = [float(row[metric]) for row in stats]
+    if metric == "error":
+        colors = [plot_style.C_FN if row["metric_type"] == "fn_rate" else plot_style.C_FP for row in stats]
+    else:
+        colors = plot_style.recall_colors([0 if math.isnan(v) else v for v in values])
     labels = [f"{int(row['offset_steps']):+d}" if xlabel == "Signed offset steps" else str(int(row["offset_steps"])) for row in stats]
 
     fig, ax = plt.subplots(figsize=(max(5.0, len(stats) * 0.55), 3.8))
-    heights = [0 if math.isnan(v) else v for v in rates]
+    heights = [0 if math.isnan(v) else v for v in values]
     ax.bar(x, heights, color=colors, edgecolor="white", linewidth=0.6, width=0.62, zorder=3)
 
     for i, row in enumerate(stats):
-        if row["n"] == 0 or math.isnan(float(row["error_rate"])):
+        if row["n"] == 0 or math.isnan(float(row[metric])):
             ax.text(i, 0.025, "n=0", ha="center", va="bottom", fontsize=8, color=plot_style.GRAY)
             continue
         ax.text(
             i,
-            min(float(row["error_rate"]) + 0.03, 1.07),
-            f"{float(row['error_rate']):.2f}\nn={int(row['n'])}",
+            min(float(row[metric]) + 0.03, 1.07),
+            f"{float(row[metric]):.2f}\nn={int(row['n'])}",
             ha="center",
             va="bottom",
             fontsize=8,
@@ -367,7 +388,7 @@ def _plot_bars(stats: list[dict], title: str, xlabel: str, output: Path) -> None
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.set_xlabel(xlabel)
-    ax.set_ylabel("Error rate")
+    ax.set_ylabel("Error rate" if metric == "error" else metric.capitalize())
     ax.set_ylim(0, 1.15)
     ax.set_title(title)
     ax.grid(axis="y", zorder=0)
@@ -378,17 +399,31 @@ def _plot_bars(stats: list[dict], title: str, xlabel: str, output: Path) -> None
 
 
 def _write_stats_csv(path: Path, rows: list[dict]) -> None:
-    fieldnames = ["dataset", "offset_steps", "offset_abs", "n", "errors", "error_rate", "metric_type"]
+    fieldnames = [
+        "dataset",
+        "offset_steps",
+        "offset_abs",
+        "n",
+        "errors",
+        "error_rate",
+        "metric_type",
+        "error",
+        "accuracy",
+        "precision",
+        "recall",
+        "f1",
+    ]
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
 
 
-def _write_dataset_outputs(records: list[dict], dataset: str, output_dir: Path, max_offset: int) -> None:
+def _write_dataset_outputs(records: list[dict], dataset: str, output_dir: Path, max_offset: int, metric: str) -> None:
     label = DATASET_LABELS.get(dataset, dataset)
     signed = _signed_stats(records, dataset, max_offset)
     absolute = _absolute_stats(records, dataset, max_offset)
+    suffix = "errors" if metric == "error" else metric
 
     stats_path = output_dir / f"{dataset}_offset_stats.csv"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -397,16 +432,22 @@ def _write_dataset_outputs(records: list[dict], dataset: str, output_dir: Path, 
 
     _plot_bars(
         signed,
-        f"{label}: error by signed temporal offset",
+        f"{label}: {_metric_title(metric)} by signed temporal offset",
         "Signed offset steps",
-        output_dir / f"{dataset}_signed_offset_errors.png",
+        metric,
+        output_dir / f"{dataset}_signed_offset_{suffix}.png",
     )
     _plot_bars(
         absolute,
-        f"{label}: error by absolute temporal offset",
+        f"{label}: {_metric_title(metric)} by absolute temporal offset",
         "Absolute offset steps",
-        output_dir / f"{dataset}_absolute_offset_errors.png",
+        metric,
+        output_dir / f"{dataset}_absolute_offset_{suffix}.png",
     )
+
+
+def _metric_title(metric: str) -> str:
+    return "error" if metric == "error" else metric.upper() if metric == "f1" else metric
 
 
 def main() -> None:
@@ -417,6 +458,12 @@ def main() -> None:
     parser.add_argument("--split", default="val", choices=["train", "val"])
     parser.add_argument("--output-dir", type=Path, default=Path(__file__).resolve().parents[3] / "results" / "evaluation" / "temporal_offsets")
     parser.add_argument("--max-offset", type=int, default=4)
+    parser.add_argument(
+        "--metric",
+        choices=METRICS,
+        default="error",
+        help="Metric to plot per offset bin. Stats CSV always includes all metrics.",
+    )
     args = parser.parse_args()
 
     if not args.csv.exists():
@@ -447,7 +494,7 @@ def main() -> None:
             print(f"[SKIP] {dataset}: no matched rows within max offset {args.max_offset}")
             continue
 
-        _write_dataset_outputs(records, dataset, args.output_dir, args.max_offset)
+        _write_dataset_outputs(records, dataset, args.output_dir, args.max_offset, args.metric)
 
 
 if __name__ == "__main__":
