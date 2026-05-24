@@ -129,6 +129,10 @@ def main() -> None:
                              "metric with a _<metric> suffix. Per-script --*-metric flags are ignored.")
 
     # Failure sampling
+    parser.add_argument("--dataset", choices=["epic_kitchen", "greatest_hits"], default=None,
+                        help="Dataset type — enables mask overlay images in the failures step. "
+                             "epic_kitchen: hand + object + refined-touch masks. "
+                             "greatest_hits: stick + object + touch masks.")
     parser.add_argument("--n-samples", type=int, default=3,
                         help="Max failure samples per sub-category for the failures step (default: 3)")
     parser.add_argument("--failures-seed", type=int, default=42,
@@ -177,6 +181,7 @@ def main() -> None:
             Object metric: {args.object_metric}
             Skip steps: {', '.join(skipped) if skipped else 'None'}
             All metrics flag: {all_m}
+            Dataset: {args.dataset if args.dataset else 'None'}
             N failure samples: {args.n_samples}
             Failures seed: {args.failures_seed}
         """))
@@ -253,12 +258,14 @@ def main() -> None:
 
     # ── 5. Failure sampling ───────────────────────────────────────────────────
     if "failures" not in skipped:
+        dataset_args = ["--dataset", args.dataset] if args.dataset else []
         ok = _run(
             [py, str(_SCRIPTS["failures"]),
              str(args.csv),
              "--output-dir", str(out_dir),
              "--n-samples",  str(args.n_samples),
              "--seed",       str(args.failures_seed),
+             *dataset_args,
              *ann_args],
             "failures", log,
         )
