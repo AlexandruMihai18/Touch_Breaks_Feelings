@@ -363,6 +363,17 @@ def main() -> None:
             f"  F1:        {f1:.4f}",
             f"  Accuracy:  {accuracy:.4f}",
         ]
+
+        try:
+            _iou = pd.to_numeric(
+                pd.read_csv(args.csv, usecols=["iou"])["iou"],
+                errors="coerce",
+            ).dropna()
+            if len(_iou) > 0:
+                gm_lines.append(f"  Mean IoU:  {_iou.mean():.4f}")
+        except (ValueError, KeyError):
+            pass
+
         pt_stats_path = out_dir / "point_heatmap_stats.json"
         if pt_stats_path.exists():
             import json as _json
