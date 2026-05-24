@@ -33,7 +33,7 @@ source activate touch_from_segmentation
 
 cd "$HOME/Touch_Breaks_Feelings"
 
-python scripts/seggpt_touch_inference.py kubric_movi_a_256 \
+python scripts/seggpt_touch_inference.py kubric \
     --data-root "/scratch-shared/$(whoami)" \
     --seed 42 \
     --dilation 10 \
