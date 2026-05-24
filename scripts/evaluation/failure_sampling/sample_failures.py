@@ -147,6 +147,13 @@ def _resolve_mask_paths(
         else:
             touch = None
 
+    elif dataset == "kubric":
+        agent = _p("object1_mask_path")
+        obj   = _p("object2_mask_path")
+        # No-touch entries have no object masks on disk; overlay will just
+        # show the plain frame for FP failures, which is expected.
+        touch = _p("touch_gt_path") if is_touch else None
+
     else:  # greatest_hits
         agent = _p("stick_mask_path")
         obj   = _p("object_mask_path")
@@ -354,10 +361,12 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, required=True,
                         help="Run output directory; depth_failures/ and "
                              "object_size_failures/ are created inside it")
-    parser.add_argument("--dataset", choices=["epic_kitchen", "greatest_hits"], default=None,
+    parser.add_argument("--dataset", choices=["epic_kitchen", "greatest_hits", "kubric"],
+                        default=None,
                         help="Dataset type — enables mask overlay images alongside each sample. "
                              "epic_kitchen: hand + object + refined-touch masks. "
-                             "greatest_hits: stick + object + touch masks.")
+                             "greatest_hits: stick + object + touch masks. "
+                             "kubric: object1 + object2 + point-of-touch masks (touch entries only).")
     parser.add_argument("--n-samples", type=int, default=3,
                         help="Max failures to sample per sub-category (default: 3)")
     parser.add_argument("--seed", type=int, default=42,

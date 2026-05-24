@@ -14,14 +14,16 @@ _ANNOTATION_FIELDS = ["depth_touch", "object_coverage", "x_touch", "y_touch", "o
 def enrich_df(df: pd.DataFrame, annotation_paths: list[Path]) -> pd.DataFrame:
     """Join annotation fields into a predictions DataFrame.
 
-    Matches on (image filename, sample type) — frame_path basename in the CSV
-    against image_path basename in the annotation JSON, with label 1 mapped to
-    type "touch" and label 0 to "no-touch". Falls back gracefully when fields
-    are already present in the CSV.
+    Matches on (video_dir, image filename, sample type) — the parent directory
+    name + basename of frame_path in the CSV against image_path in the
+    annotation JSON, with label 1 mapped to type "touch" and label 0 to
+    "no-touch". Using the parent directory disambiguates datasets like Kubric
+    or Greatest Hits where frame filenames (frame_000001.jpg) repeat across
+    videos.
 
     Fields added / filled: depth_touch, object_coverage, x_touch, y_touch.
     """
-    lookup: dict[tuple[str, int], dict] = {}
+    lookup: dict[tuple[str, str, int], dict] = {}
     for path in annotation_paths:
         if not path.exists():
             print(f"[WARN] annotation file not found: {path}")
@@ -33,7 +35,8 @@ def enrich_df(df: pd.DataFrame, annotation_paths: list[Path]) -> pd.DataFrame:
             if not img:
                 continue
             label = 1 if entry.get("type") == "touch" else 0
-            key = (Path(img).name, label)
+            p = Path(img)
+            key = (p.parent.name, p.name, label)
             if key not in lookup:
                 lookup[key] = entry
 
@@ -48,7 +51,8 @@ def enrich_df(df: pd.DataFrame, annotation_paths: list[Path]) -> pd.DataFrame:
 
     matched = unmatched = 0
     for idx, row in df.iterrows():
-        key = (Path(str(row["frame_path"])).name, int(row["label"]))
+        p = Path(str(row["frame_path"]))
+        key = (p.parent.name, p.name, int(row["label"]))
         entry = lookup.get(key)
         if entry is None:
             unmatched += 1

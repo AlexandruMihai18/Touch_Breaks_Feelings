@@ -129,10 +129,12 @@ def main() -> None:
                              "metric with a _<metric> suffix. Per-script --*-metric flags are ignored.")
 
     # Failure sampling
-    parser.add_argument("--dataset", choices=["epic_kitchen", "greatest_hits"], default=None,
+    parser.add_argument("--dataset", choices=["epic_kitchen", "greatest_hits", "kubric"],
+                        default=None,
                         help="Dataset type — enables mask overlay images in the failures step. "
                              "epic_kitchen: hand + object + refined-touch masks. "
-                             "greatest_hits: stick + object + touch masks.")
+                             "greatest_hits: stick + object + touch masks. "
+                             "kubric: object1 + object2 + point-of-touch masks.")
     parser.add_argument("--n-samples", type=int, default=3,
                         help="Max failure samples per sub-category for the failures step (default: 3)")
     parser.add_argument("--failures-seed", type=int, default=42,
