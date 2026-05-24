@@ -213,23 +213,41 @@ def _merge_one(spec: dict, dry_run: bool) -> bool:
     if binary_path:
         bin_df = pd.read_csv(binary_path)
         path_col = _detect_path_col(bin_df, str(binary_path))
+        print(f"  [DEBUG binary] columns   : {list(bin_df.columns)}")
+        print(f"  [DEBUG binary] rows      : {len(bin_df):,}")
         keep = [c for c in ["frame_id", path_col, "label", "prediction"] if c in bin_df.columns]
         bin_df = bin_df[keep].rename(columns={path_col: "frame_path"})
+        print(f"  [DEBUG binary] kept cols : {list(bin_df.columns)}")
+        print(f"  [DEBUG binary] frame_id sample: {bin_df['frame_id'].iloc[:3].tolist() if 'frame_id' in bin_df.columns else 'MISSING'}")
         frames.append(("binary", bin_df))
 
     if point_path:
         pt_df = pd.read_csv(point_path)
         path_col = _detect_path_col(pt_df, str(point_path))
+        print(f"  [DEBUG point ] columns   : {list(pt_df.columns)}")
+        print(f"  [DEBUG point ] rows      : {len(pt_df):,}")
         # drop frame_path from point — it may differ from binary's path root;
         # we keep frame_path from the binary CSV and join on frame_id instead.
         pt_keep = [c for c in ["frame_id", "x_touch", "y_touch"] if c in pt_df.columns]
         pt_df = pt_df[pt_keep]
+        print(f"  [DEBUG point ] kept cols : {list(pt_df.columns)}")
+        print(f"  [DEBUG point ] frame_id sample: {pt_df['frame_id'].iloc[:3].tolist() if 'frame_id' in pt_df.columns else 'MISSING'}")
         frames.append(("point", pt_df))
 
     if len(frames) == 2:
         bin_df, pt_df = frames[0][1], frames[1][1]
         # prefer frame_id as join key; fall back to frame_path if frame_id absent
         join_key = "frame_id" if "frame_id" in bin_df.columns and "frame_id" in pt_df.columns else "frame_path"
+        print(f"  [DEBUG merge ] join key  : {join_key}")
+        bin_keys = set(bin_df[join_key].dropna())
+        pt_keys  = set(pt_df[join_key].dropna())
+        overlap  = bin_keys & pt_keys
+        print(f"  [DEBUG merge ] binary unique keys : {len(bin_keys):,}")
+        print(f"  [DEBUG merge ] point  unique keys : {len(pt_keys):,}")
+        print(f"  [DEBUG merge ] overlapping keys   : {len(overlap):,}")
+        if not overlap:
+            print(f"  [DEBUG merge ] binary sample: {list(bin_keys)[:3]}")
+            print(f"  [DEBUG merge ] point  sample: {list(pt_keys)[:3]}")
         merged = bin_df.merge(pt_df, on=join_key, how="inner")
     else:
         merged = frames[0][1]
