@@ -5,7 +5,8 @@ annotation JSON.  Nonzero offsets come from <split>_context_frames.json when it
 exists; otherwise they are inferred from no-touch rows in the main annotation
 JSON by sorting each video by frame_idx and measuring row distance to the
 nearest touch row.  For Kubric, offset 0 comes from touch rows and nonzero
-offsets come from kubric.hard_negative_offsets on no-touch rows.
+offsets come from kubric.hard_negative_offsets when present; otherwise they
+fall back to the same frame-order inference.
 
 By default, the plotted metric is class-specific:
   * offset 0: false negative rate on touch frames
@@ -186,41 +187,48 @@ def _load_standard_offsets(dataset: str, anno_dir: Path, split: str, max_offset:
     return _infer_offsets_from_main(dataset, entries, max_offset)
 
 
-def _load_kubric_offsets(dataset: str, anno_dir: Path, split: str) -> list[OffsetRow]:
-    rows: list[OffsetRow] = []
-    for entry in _read_json(anno_dir / f"{split}.json"):
+def _load_kubric_offsets(dataset: str, anno_dir: Path, split: str, max_offset: int | None) -> list[OffsetRow]:
+    entries = _read_json(anno_dir / f"{split}.json")
+    rows = _touch_offsets_from_main(dataset, entries)
+    explicit_nonzero = 0
+
+    for entry in entries:
         label = _label_from_entry(entry)
         if label == 1:
-            rows.append(
-                OffsetRow(
-                    dataset=dataset,
-                    video_id=_video_id(entry),
-                    frame_name=_frame_name(entry.get("image_path", "")),
-                    label=1,
-                    offset_steps=0,
-                )
-            )
             continue
 
         offsets = (entry.get("kubric") or {}).get("hard_negative_offsets") or []
         for item in offsets:
             if not isinstance(item, dict) or item.get("offset") is None:
                 continue
-            rows.append(
-                OffsetRow(
-                    dataset=dataset,
-                    video_id=_video_id(entry),
-                    frame_name=_frame_name(entry.get("image_path", "")),
-                    label=0,
-                    offset_steps=int(item["offset"]),
-                )
-            )
+            offset = int(item["offset"])
+            if offset == 0 or (max_offset is not None and abs(offset) > max_offset):
+                continue
+            rows.append(_offset_row(dataset, entry, label=0, offset_steps=offset))
+            explicit_nonzero += 1
+
+    inferred_rows = _infer_offsets_from_main(dataset, entries, max_offset)
+    inferred_nonzero = [row for row in inferred_rows if row.offset_steps != 0]
+    if not explicit_nonzero:
+        print(f"{dataset}: no kubric.hard_negative_offsets found; using frame_idx-order fallback")
+        return inferred_rows
+
+    explicit_keys = {(row.video_id, row.frame_name, row.label, row.offset_steps) for row in rows}
+    added = 0
+    for row in inferred_nonzero:
+        key = (row.video_id, row.frame_name, row.label, row.offset_steps)
+        if key in explicit_keys:
+            continue
+        rows.append(row)
+        added += 1
+    if added:
+        print(f"{dataset}: added {added} frame-order fallback offsets beyond explicit hard negatives")
     return rows
 
 
 def _load_offsets(dataset: str, anno_dir: Path, split: str, max_offset: int | None) -> list[OffsetRow]:
     if dataset == "kubric":
-        return _load_kubric_offsets(dataset, anno_dir, split)
+        return _load_kubric_offsets(dataset, anno_dir, split, max_offset)
     return _load_standard_offsets(dataset, anno_dir, split, max_offset)
 
 
