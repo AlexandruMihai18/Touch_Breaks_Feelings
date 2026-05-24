@@ -334,25 +334,28 @@ def main() -> None:
     stats_path.write_text(json.dumps(stats, indent=2))
     print(f"  Saved → {stats_path}")
 
+    valid_hr = hit_rate[~np.isnan(hit_rate) & (hit_rate > 0)]
+    hr_vmin = float(valid_hr.min()) if valid_hr.size > 0 else 0.0
     _plot_heatmap(
         hit_rate, cell_count,
         title="Touch-point regression — hit rate\n(prediction lands in GT cell)",
         cbar_label="Hit@1",
         output_path=base.with_name(base.stem + "_hit_rate.png"),
         cmap_name="RdYlGn",
-        vmin=0.0, vmax=1.0,
+        vmin=hr_vmin, vmax=1.0,
         fmt="{:.2f}",
     )
 
-    p90 = float(np.nanpercentile(mean_err[~np.isnan(mean_err)], 90)) \
-          if not np.all(np.isnan(mean_err)) else 0.5
+    valid_me = mean_err[~np.isnan(mean_err) & (mean_err > 0)]
+    me_vmin = float(valid_me.min()) if valid_me.size > 0 else 0.0
+    p90 = float(np.nanpercentile(valid_me, 90)) if valid_me.size > 0 else 0.5
     _plot_heatmap(
         mean_err, cell_count,
         title="Touch-point regression — mean error (normalized)\n(predicted point → GT cell centroid)",
         cbar_label="Mean error (norm, [0–√2])",
         output_path=base.with_name(base.stem + "_mean_error.png"),
         cmap_name="RdYlGn_r",
-        vmin=0.0, vmax=p90,
+        vmin=me_vmin, vmax=p90,
         fmt="{:.3f}",
     )
 

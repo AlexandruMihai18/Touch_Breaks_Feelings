@@ -95,8 +95,11 @@ def plot_heatmap(
 
     fig, ax = plt.subplots(figsize=(6.0, 5.5))
 
+    valid = recall[~np.isnan(recall) & (recall > 0)]
+    vmin = float(valid.min()) if valid.size > 0 else 0.0
+
     masked = np.ma.masked_invalid(recall)
-    im = ax.imshow(masked, cmap=cmap, vmin=0.5, vmax=1, aspect="equal")
+    im = ax.imshow(masked, cmap=cmap, vmin=vmin, vmax=1, aspect="equal")
 
     cbar = fig.colorbar(im, ax=ax, pad=0.02, fraction=0.046, aspect=20)
     cbar.set_label(metric_label, fontsize=9)
@@ -112,7 +115,8 @@ def plot_heatmap(
             else:
                 v = recall[y, x]
                 txt = f"{v:.2f}\n({n})"
-                fg = "white" if (v < 0.30 or v > 0.78) else plot_style.DARK
+                fg = "white" if (v < vmin + (1 - vmin) * 0.25
+                                 or v > vmin + (1 - vmin) * 0.78) else plot_style.DARK
                 ax.text(x, y, txt, ha="center", va="center",
                         fontsize=7.0, color=fg, linespacing=1.35)
 
