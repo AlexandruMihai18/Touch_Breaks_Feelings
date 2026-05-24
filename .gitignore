@@ -28,6 +28,7 @@ prepared_data/
 **/data/**/*.zip
 *.m4a
 *.csv
+results/**/*.txt
 
 # Experimentation
 wandb/
@@ -235,3 +236,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Fine-tuning
+qwen2-vl-touch-detection/
