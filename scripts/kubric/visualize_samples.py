@@ -124,6 +124,15 @@ def visualize_samples(
         ctx_label_map = _make_label_map(ctx_mask1, ctx_mask2)
         ctx_pil = Image.fromarray(ctx_img)
 
+        ctx_touch_mask = annotate_touch(
+            ctx_img,
+            ctx_mask1,
+            ctx_mask2,
+            dilation=dilation,
+            abs_d_threshold=abs_d_threshold,
+            local_radius=local_radius,
+        )
+
         pred_obj1, pred_obj2 = _predict_masks(Image.fromarray(qry_img), ctx_pil, ctx_label_map)
 
         touch_mask = annotate_touch(
@@ -140,7 +149,7 @@ def visualize_samples(
 
         _save(ctx_img, sample_dir / "context.jpg")
         _save(
-            draw_dual_mask_viz(ctx_img, ctx_mask1, ctx_mask2, np.zeros_like(ctx_mask1), [], []),
+            draw_dual_mask_viz(ctx_img, ctx_mask1, ctx_mask2, ctx_touch_mask, [], []),
             sample_dir / "context_masks.jpg",
         )
         _save(qry_img, sample_dir / "target.jpg")
