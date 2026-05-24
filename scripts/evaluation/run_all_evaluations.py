@@ -37,10 +37,11 @@ _REPO = Path(__file__).resolve().parents[2]
 _EVAL = Path(__file__).parent
 
 _SCRIPTS = {
-    "depth":    _EVAL / "depth"           / "analyze_depth_performance.py",
-    "object":   _EVAL / "object_classes"  / "analyze_class_performance.py",
-    "coverage": _EVAL / "object_coverage" / "analyze_coverage_performance.py",
-    "zones":    _EVAL / "touch_zones"     / "analyze_grid_performance.py",
+    "depth":    _EVAL / "depth"             / "analyze_depth_performance.py",
+    "object":   _EVAL / "object_classes"    / "analyze_class_performance.py",
+    "coverage": _EVAL / "object_coverage"   / "analyze_coverage_performance.py",
+    "zones":    _EVAL / "touch_zones"       / "analyze_grid_performance.py",
+    "failures": _EVAL / "failure_sampling"  / "sample_failures.py",
 }
 
 _OUTPUTS = {
@@ -122,10 +123,16 @@ def main() -> None:
     parser.add_argument("--skip", nargs="*",
                         choices=list(_SCRIPTS), default=[],
                         metavar="STEP",
-                        help="Steps to skip: depth object coverage zones")
+                        help="Steps to skip: depth object coverage zones failures")
     parser.add_argument("--all-metrics", action="store_true",
                         help="Pass --all-metrics to every analysis script: generates one figure per "
                              "metric with a _<metric> suffix. Per-script --*-metric flags are ignored.")
+
+    # Failure sampling
+    parser.add_argument("--n-samples", type=int, default=3,
+                        help="Max failure samples per sub-category for the failures step (default: 3)")
+    parser.add_argument("--failures-seed", type=int, default=42,
+                        help="Random seed for failure sampling (default: 42)")
 
     args = parser.parse_args()
 
@@ -170,6 +177,8 @@ def main() -> None:
             Object metric: {args.object_metric}
             Skip steps: {', '.join(skipped) if skipped else 'None'}
             All metrics flag: {all_m}
+            N failure samples: {args.n_samples}
+            Failures seed: {args.failures_seed}
         """))
 
     # ── 1. Depth ──────────────────────────────────────────────────────────────
@@ -241,6 +250,21 @@ def main() -> None:
         results["zones"] = str(out_dir / "grid_heatmap_*.png") if (ok and all_m) else (str(out) if ok else "FAILED")
     else:
         results["zones"] = "SKIPPED"
+
+    # ── 5. Failure sampling ───────────────────────────────────────────────────
+    if "failures" not in skipped:
+        ok = _run(
+            [py, str(_SCRIPTS["failures"]),
+             str(args.csv),
+             "--output-dir", str(out_dir),
+             "--n-samples",  str(args.n_samples),
+             "--seed",       str(args.failures_seed),
+             *ann_args],
+            "failures", log,
+        )
+        results["failures"] = str(out_dir / "depth_failures") + ", " + str(out_dir / "object_size_failures") if ok else "FAILED"
+    else:
+        results["failures"] = "SKIPPED"
 
     # ── Summary ───────────────────────────────────────────────────────────────
     _tee(f"\n{'═' * 60}", log)
