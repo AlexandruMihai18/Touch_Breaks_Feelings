@@ -402,16 +402,32 @@ def _plot_lines(stats_by_run: dict[str, list[dict]], title: str, xlabel: str, me
     for i, (run_name, stats) in enumerate(stats_by_run.items()):
         values = [math.nan if row["n"] == 0 else float(row[metric]) for row in stats]
         y = [math.nan if math.isnan(v) else v for v in values]
+        color = colors[i % len(colors)]
         ax.plot(
             x,
             y,
             marker="o",
             linewidth=1.9,
             markersize=4.5,
-            color=colors[i % len(colors)],
+            color=color,
             label=run_name,
             zorder=3,
         )
+        y_shift = 7 if i % 2 == 0 else -13
+        va = "bottom" if y_shift > 0 else "top"
+        for xi, yi, row in zip(x, y, stats):
+            if math.isnan(yi):
+                continue
+            ax.annotate(
+                f"{yi:.2f}\nn={int(row['n'])}",
+                xy=(xi, yi),
+                xytext=(0, y_shift),
+                textcoords="offset points",
+                ha="center",
+                va=va,
+                fontsize=7,
+                color=color,
+            )
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
