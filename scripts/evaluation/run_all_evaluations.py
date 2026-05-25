@@ -131,6 +131,11 @@ def main() -> None:
                         help="Pass --all-metrics to every analysis script: generates one figure per "
                              "metric with a _<metric> suffix. Per-script --*-metric flags are ignored.")
 
+    # Point-touch normalization diagnostic
+    parser.add_argument("--processor-size", type=str, default=None, metavar="WxH",
+                        help="Passed to point_zones: if given (e.g. 448x448), also computes RMSE "
+                             "in processor-output space and prints both for comparison.")
+
     # Failure sampling
     parser.add_argument("--dataset", choices=["epic_kitchen", "greatest_hits", "kubric"],
                         default=None,
@@ -290,11 +295,13 @@ def main() -> None:
                 results["point_zones"] = "SKIPPED (no point predictions)"
             else:
                 out = out_dir / _OUTPUTS["point_zones"]
+                proc_args = ["--processor-size", args.processor_size] if args.processor_size else []
                 ok = _run(
                     [py, str(_SCRIPTS["point_zones"]),
                      str(args.csv),
                      "--grid",   str(args.grid),
                      "--output", str(out),
+                     *proc_args,
                      *ann_args],
                     "point_zones", log,
                 )
@@ -379,17 +386,22 @@ def main() -> None:
             import json as _json
             pt = _json.loads(pt_stats_path.read_text())
             rmse = pt.get("rmse_norm", float("nan"))
+            rmse_proc = pt.get("rmse_norm_processor")
+            proc_size = pt.get("processor_size")
             n_masked = pt.get("n_masked", 0)
             n_total = pt.get("n", 0)
-            mask_mode = pt.get("mask_mode", "zero_coord")
-            mode_label = "zero-coord" if mask_mode == "zero_coord" else "no-touch-pred"
+            mask_mode = pt.get("mask_mode", "predicted_touch")
+            mode_label = "label=0 + zero-coord FN" if mask_mode == "zero_coord" else "label=0"
             gm_lines += [
                 "",
-                "Point Touch RMSE",
-                f"  Mask mode: {mask_mode}",
-                f"  RMSE (norm, {n_masked} {mode_label} masked): {rmse:.4f}",
-                f"  N evaluated: {n_total - n_masked}  (of {n_total} total)",
+                "Point Touch RMSE  (evaluated on label==1 samples)",
+                f"  Mask mode: {mask_mode}  ({n_masked} {mode_label} excluded)",
+                f"  RMSE image-normalized : {rmse:.4f}",
             ]
+            if rmse_proc is not None:
+                gm_lines.append(f"  RMSE processor-norm   : {rmse_proc:.4f}  "
+                                 f"(processor size: {proc_size})")
+            gm_lines.append(f"  N evaluated: {n_total - n_masked}  (of {n_total} total)")
 
         gm_path = out_dir / "global_metrics.txt"
         gm_path.write_text("\n".join(gm_lines) + "\n")
