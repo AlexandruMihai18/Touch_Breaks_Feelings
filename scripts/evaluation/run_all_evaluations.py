@@ -131,7 +131,13 @@ def main() -> None:
                         help="Pass --all-metrics to every analysis script: generates one figure per "
                              "metric with a _<metric> suffix. Per-script --*-metric flags are ignored.")
 
-    # Point-touch normalization diagnostic
+    # Point-touch mask mode and normalization diagnostic
+    parser.add_argument("--mask-mode",
+                        choices=["auto", "zero_coord", "predicted_touch"], default="auto",
+                        help="Passed to point_zones — how to mask rows before computing RMSE. "
+                             "zero_coord: exclude (0,0) sentinel predictions within label==1 (Qwen). "
+                             "predicted_touch: keep all label==1 rows (DINO). "
+                             "auto (default): predicted_touch for all models.")
     parser.add_argument("--processor-size", type=str, default=None, metavar="WxH",
                         help="Passed to point_zones: if given (e.g. 448x448), also computes RMSE "
                              "in processor-output space and prints both for comparison.")
@@ -295,12 +301,14 @@ def main() -> None:
                 results["point_zones"] = "SKIPPED (no point predictions)"
             else:
                 out = out_dir / _OUTPUTS["point_zones"]
+                mask_args = ["--mask-mode", args.mask_mode] if args.mask_mode != "auto" else []
                 proc_args = ["--processor-size", args.processor_size] if args.processor_size else []
                 ok = _run(
                     [py, str(_SCRIPTS["point_zones"]),
                      str(args.csv),
                      "--grid",   str(args.grid),
                      "--output", str(out),
+                     *mask_args,
                      *proc_args,
                      *ann_args],
                     "point_zones", log,
