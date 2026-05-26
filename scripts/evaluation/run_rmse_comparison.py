@@ -58,38 +58,43 @@ _DATASETS: dict[str, dict] = {
 
 _TARGET_RUNS: list[dict] = [
 
-    # ── Qwen visual-audio ─────────────────────────────────────────────────────
+    # ── Qwen visual-audio  (output in [0, 1000] scale) ────────────────────────
     dict(
-        dataset  = "epic_kitchen",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/EpicKitchen_qwen3_visual_audio_description_baseline_predictions.csv",
-        run_name = "ek_qwen_vision_audio",
-        qwen     = True,
+        dataset     = "epic_kitchen",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/EpicKitchen_qwen3_visual_audio_description_baseline_predictions.csv",
+        run_name    = "ek_qwen_vision_audio",
+        mask_mode   = "zero_coord",
+        coord_scale = 1000,
     ),
     dict(
-        dataset  = "greatest_hits",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/GreatestHits_qwen3_visual_audio_description_baseline_predictions.csv",
-        run_name = "gh_qwen_vision_audio",
-        qwen     = True,
+        dataset     = "greatest_hits",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/GreatestHits_qwen3_visual_audio_description_baseline_predictions.csv",
+        run_name    = "gh_qwen_vision_audio",
+        mask_mode   = "zero_coord",
+        coord_scale = 1000,
     ),
 
-    # ── DINO mlp3 ────────────────────────────────────────────────────────────
+    # ── DINO mlp3  (output in 448×448 processor space) ───────────────────────
     dict(
-        dataset  = "epic_kitchen",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/ek_dino_mlp3_prediction.csv",
-        run_name = "ek_dino_mlp3",
-        qwen     = False,
+        dataset     = "epic_kitchen",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/ek_dino_mlp3_prediction.csv",
+        run_name    = "ek_dino_mlp3",
+        mask_mode   = "predicted_touch",
+        coord_scale = 448,
     ),
     dict(
-        dataset  = "greatest_hits",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/gh_dino_mlp3_prediction.csv",
-        run_name = "gh_dino_mlp3",
-        qwen     = False,
+        dataset     = "greatest_hits",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/gh_dino_mlp3_prediction.csv",
+        run_name    = "gh_dino_mlp3",
+        mask_mode   = "predicted_touch",
+        coord_scale = 448,
     ),
     dict(
-        dataset  = "kubric",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/kubric_dino_mlp3_prediction.csv",
-        run_name = "kubric_dino_mlp3",
-        qwen     = False,
+        dataset     = "kubric",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/kubric_dino_mlp3_prediction.csv",
+        run_name    = "kubric_dino_mlp3",
+        mask_mode   = "predicted_touch",
+        coord_scale = 448,
     ),
 ]
 
@@ -99,12 +104,7 @@ _SKIP_STEPS = ["depth", "object", "coverage", "zones", "failures"]
 
 # ── Subprocess helpers ────────────────────────────────────────────────────────
 
-def _build_cmd(
-    run: dict,
-    ds: dict,
-    output_dir: Path,
-    processor_size: str | None,
-) -> list[str]:
+def _build_cmd(run: dict, ds: dict, output_dir: Path) -> list[str]:
     cmd = [
         sys.executable, str(_EVAL_SCRIPT),
         "--csv",         run["csv"],
@@ -113,23 +113,21 @@ def _build_cmd(
         "--output-dir",  str(output_dir),
         "--dataset",     ds["dataset"],
         "--skip",        *_SKIP_STEPS,
+        "--mask-mode",   run["mask_mode"],
+        "--coord-scale", str(run["coord_scale"]),
     ]
     if ds["clusters"]:
         cmd += ["--clusters", ds["clusters"]]
-    if run["qwen"]:
-        cmd += ["--mask-mode", "zero_coord"]
-    if processor_size and run["qwen"]:
-        cmd += ["--processor-size", processor_size]
     return cmd
 
 
-def _run_one(run: dict, ds: dict, output_dir: Path, processor_size: str | None) -> bool:
+def _run_one(run: dict, ds: dict, output_dir: Path) -> bool:
     csv_path = Path(run["csv"])
     if not csv_path.exists():
         print(f"  [SKIP] CSV not found: {csv_path}")
         return False
 
-    cmd = _build_cmd(run, ds, output_dir, processor_size)
+    cmd = _build_cmd(run, ds, output_dir)
     result = subprocess.run(cmd)
     ok = result.returncode == 0
     print(f"  [{'OK' if ok else 'FAILED'}]\n")
@@ -256,10 +254,6 @@ def main() -> None:
         help="Evaluation output root (default: results/evaluation/)",
     )
     parser.add_argument(
-        "--processor-size", type=str, default=None, metavar="WxH",
-        help="If given (e.g. 448x448), also compute processor-space RMSE for Qwen runs",
-    )
-    parser.add_argument(
         "--skip-eval", action="store_true",
         help="Skip evaluation — just collect existing stats and print the table",
     )
@@ -276,22 +270,20 @@ def main() -> None:
         if args.dry_run:
             print("  [DRY RUN]")
         print(f"  Skipping steps: {', '.join(_SKIP_STEPS)}")
-        if args.processor_size:
-            print(f"  Processor size (Qwen diagnostic): {args.processor_size}")
         print(f"{'─' * 60}\n")
 
         passed = failed = 0
         for i, run in enumerate(_TARGET_RUNS, 1):
             ds  = _DATASETS[run["dataset"]]
-            tag = "qwen/zero_coord" if run["qwen"] else "dino/predicted_touch"
-            print(f"[{i}/{len(_TARGET_RUNS)}]  {run['run_name']}  ({tag})")
+            print(f"[{i}/{len(_TARGET_RUNS)}]  {run['run_name']}  "
+                  f"(mask={run['mask_mode']}  scale=÷{run['coord_scale']})")
 
             if args.dry_run:
-                cmd = _build_cmd(run, ds, args.output_dir, args.processor_size)
+                cmd = _build_cmd(run, ds, args.output_dir)
                 print("  " + " ".join(cmd) + "\n")
                 continue
 
-            ok = _run_one(run, ds, args.output_dir, args.processor_size)
+            ok = _run_one(run, ds, args.output_dir)
             if ok:
                 passed += 1
             else:

@@ -78,23 +78,23 @@ def _augment_row(
     x_gt: int,
     y_gt: int,
     grid: int,
+    coord_scale: float | None = None,
     cx_gt_n: float | None = None,
     cy_gt_n: float | None = None,
 ) -> tuple[int, int, float]:
     """Return (x_pred_cell, y_pred_cell, error_norm).
 
-    error_norm is the joint 2-D Euclidean distance in normalized [0, 1] space
-    between the predicted point and the GT reference point.
-
-    cx_gt_n / cy_gt_n: pre-computed GT in [0, 1] (mask centroid from annotation).
-    If not provided, falls back to the cell centroid ((x_gt+0.5)/grid).
-
-    Predictions are always in pixel coordinates and are normalized by the
-    original image dimensions read from disk.
+    coord_scale: if given, divide x_pred/y_pred by this value to normalize
+    (e.g. 1000 for Qwen models that output in [0, 1000] scale).
+    If None, normalize by the original image dimensions read from disk (DINO).
     """
-    w, h = _image_size(frame_path)
-    x_n = x_pred / w
-    y_n = y_pred / h
+    if coord_scale is not None:
+        x_n = x_pred / coord_scale
+        y_n = y_pred / coord_scale
+    else:
+        w, h = _image_size(frame_path)
+        x_n = x_pred / w
+        y_n = y_pred / h
     if cx_gt_n is None or cy_gt_n is None:
         cx_gt_n = (x_gt + 0.5) / grid
         cy_gt_n = (y_gt + 0.5) / grid
@@ -223,16 +223,16 @@ def main() -> None:
     parser.add_argument(
         "--mask-mode", choices=["auto", "zero_coord", "predicted_touch"], default="auto",
         help="Secondary mask applied within label==1 samples for RMSE. "
-             "predicted_touch: no further filtering (default). "
+             "predicted_touch: no further filtering (default for DINO). "
              "zero_coord: additionally exclude rows where x_pred=0 & y_pred=0 "
              "(Qwen sentinel for 'no touch predicted'). "
-             "auto (default): uses predicted_touch for all models.",
+             "auto (default): uses predicted_touch.",
     )
     parser.add_argument(
-        "--processor-size", type=str, default=None, metavar="WxH",
-        help="Diagnostic only: if given (e.g. 448x448), also computes RMSE treating "
-             "predictions as pixel coordinates in the processor output space and prints "
-             "both image-norm and processor-norm RMSE for comparison.",
+        "--coord-scale", type=float, default=None, metavar="SCALE",
+        help="Divide x_pred/y_pred by this value to normalize to [0, 1]. "
+             "Use 1000 for Qwen models (output in [0, 1000] scale). "
+             "Default: normalize by original image dimensions (DINO).",
     )
     args = parser.parse_args()
 
@@ -300,6 +300,7 @@ def main() -> None:
                 int(row["x_gt"]),
                 int(row["y_gt"]),
                 args.grid,
+                coord_scale=args.coord_scale,
                 cx_gt_n=cx_gt_n,
                 cy_gt_n=cy_gt_n,
             )
@@ -343,38 +344,6 @@ def main() -> None:
     mode_label = "zero-coord FN" if mask_mode == "zero_coord" else "label=0"
     print(f"    RMSE ({n_masked} {mode_label} masked)          : {rmse:.4f}")
 
-    # ── Processor-size normalization diagnostic ───────────────────────────────
-    proc_rmse = float("nan")
-    if args.processor_size:
-        pw, ph = map(int, args.processor_size.lower().split("x"))
-        cx_gt = (df["x_gt"] + 0.5) / args.grid
-        cy_gt = (df["y_gt"] + 0.5) / args.grid
-        x_proc_n = df["x_pred"] / pw
-        y_proc_n = df["y_pred"] / ph
-        err_proc = np.sqrt((x_proc_n - cx_gt) ** 2 + (y_proc_n - cy_gt) ** 2)
-        proc_rmse = float(np.sqrt((err_proc[rmse_keep] ** 2).mean())) if rmse_keep.any() else float("nan")
-
-        print(f"\n  Normalization diagnostic  (processor: {pw}×{ph})")
-        print(f"    x_pred range : [{df.loc[rmse_keep, 'x_pred'].min():.1f}, "
-              f"{df.loc[rmse_keep, 'x_pred'].max():.1f}]")
-        print(f"    y_pred range : [{df.loc[rmse_keep, 'y_pred'].min():.1f}, "
-              f"{df.loc[rmse_keep, 'y_pred'].max():.1f}]")
-        print(f"    RMSE image-normalized    : {rmse:.4f}")
-        print(f"    RMSE processor-normalized: {proc_rmse:.4f}")
-        samp = df[rmse_keep].sample(min(5, int(rmse_keep.sum())), random_state=42)
-        for _, row in samp.iterrows():
-            w_img, h_img = _image_size(str(row["frame_path"]))
-            xp, yp = float(row["x_pred"]), float(row["y_pred"])
-            xi, yi = xp / w_img, yp / h_img
-            xpn, ypn = xp / pw, yp / ph
-            xg, yg = int(row["x_gt"]), int(row["y_gt"])
-            cxg, cyg = (xg + 0.5) / args.grid, (yg + 0.5) / args.grid
-            ei = float(np.sqrt((xi - cxg) ** 2 + (yi - cyg) ** 2))
-            ep = float(np.sqrt((xpn - cxg) ** 2 + (ypn - cyg) ** 2))
-            print(f"      px=({xp:.0f},{yp:.0f})  "
-                  f"img({w_img}×{h_img})→({xi:.3f},{yi:.3f}) err={ei:.3f}  "
-                  f"proc({pw}×{ph})→({xpn:.3f},{ypn:.3f}) err={ep:.3f}  "
-                  f"gt_cell=({xg},{yg})")
 
     # ── Per-cell grids ────────────────────────────────────────────────────────
     hit_rate, mean_err, cell_count = _compute_grids(df, args.grid)
@@ -383,17 +352,16 @@ def main() -> None:
     base = Path(base)
 
     stats = {
-        "hit_at_1":               float(hit1.mean()),
-        "mean_error_norm":        float(df["error_norm"].mean()),
-        "median_error_norm":      float(df["error_norm"].median()),
-        "rmse_norm":              rmse,
-        "rmse_norm_processor":    proc_rmse if args.processor_size else None,
-        "processor_size":         args.processor_size,
-        "n":                      n,
-        "n_masked":               n_masked,
-        "mask_mode":              mask_mode,
-        "gt_source":              "mask_centroid" if has_centroid else "cell_centroid",
-        "grid":                   args.grid,
+        "hit_at_1":          float(hit1.mean()),
+        "mean_error_norm":   float(df["error_norm"].mean()),
+        "median_error_norm": float(df["error_norm"].median()),
+        "rmse_norm":         rmse,
+        "n":                 n,
+        "n_masked":          n_masked,
+        "mask_mode":         mask_mode,
+        "coord_scale":       args.coord_scale,
+        "gt_source":         "mask_centroid" if has_centroid else "cell_centroid",
+        "grid":              args.grid,
     }
     stats_path = base.with_name(base.stem + "_stats.json")
     stats_path.write_text(json.dumps(stats, indent=2))

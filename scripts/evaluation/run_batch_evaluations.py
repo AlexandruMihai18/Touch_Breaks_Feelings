@@ -84,19 +84,25 @@ _RUNS: list[dict] = [
 
     # ── Epic Kitchen — Qwen ───────────────────────────────────────────────────
     dict(
-        dataset  = "epic_kitchen",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/EpicKitchen_qwen2_audio_baseline_predictions.csv",
-        run_name = "ek_qwen_audio",
+        dataset     = "epic_kitchen",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/EpicKitchen_qwen2_audio_baseline_predictions.csv",
+        run_name    = "ek_qwen_audio",
+        coord_scale = 1000,
+        mask_mode   = "zero_coord",
     ),
     dict(
-        dataset  = "epic_kitchen",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/EpicKitchen_qwen3_visual_audio_description_baseline_predictions.csv",
-        run_name = "ek_qwen_vision_audio",
+        dataset     = "epic_kitchen",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/EpicKitchen_qwen3_visual_audio_description_baseline_predictions.csv",
+        run_name    = "ek_qwen_vision_audio",
+        coord_scale = 1000,
+        mask_mode   = "zero_coord",
     ),
     dict(
-        dataset  = "epic_kitchen",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/EpicKitchen_qwen3_visual_baseline_predictions.csv",
-        run_name = "ek_qwen_vision",
+        dataset     = "epic_kitchen",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/EpicKitchen_qwen3_visual_baseline_predictions.csv",
+        run_name    = "ek_qwen_vision",
+        coord_scale = 1000,
+        mask_mode   = "zero_coord",
     ),
 
     # ── Greatest Hits — algorithmic ───────────────────────────────────────────
@@ -125,26 +131,34 @@ _RUNS: list[dict] = [
 
     # ── Greatest Hits — Qwen ──────────────────────────────────────────────────
     dict(
-        dataset  = "greatest_hits",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/GreatestHits_qwen3_visual_audio_description_baseline_predictions.csv",
-        run_name = "gh_qwen_vision_audio",
+        dataset     = "greatest_hits",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/GreatestHits_qwen3_visual_audio_description_baseline_predictions.csv",
+        run_name    = "gh_qwen_vision_audio",
+        coord_scale = 1000,
+        mask_mode   = "zero_coord",
     ),
     dict(
-        dataset  = "greatest_hits",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/GreatestHits_qwen3_visual_baseline_predictions.csv",
-        run_name = "gh_qwen_vision",
+        dataset     = "greatest_hits",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/GreatestHits_qwen3_visual_baseline_predictions.csv",
+        run_name    = "gh_qwen_vision",
+        coord_scale = 1000,
+        mask_mode   = "zero_coord",
     ),
     dict(
-        dataset  = "greatest_hits",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/GreatestHits_qwen2_audio_baseline_predictions.csv",
-        run_name = "gh_qwen_audio",
+        dataset     = "greatest_hits",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/GreatestHits_qwen2_audio_baseline_predictions.csv",
+        run_name    = "gh_qwen_audio",
+        coord_scale = 1000,
+        mask_mode   = "zero_coord",
     ),
 
     # ── Kubric ────────────────────────────────────────────────────────────────
     dict(
-        dataset  = "kubric",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/Kubric_qwen3_visual_baseline_predictions.csv",
-        run_name = "kubric_vision",
+        dataset     = "kubric",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/Kubric_qwen3_visual_baseline_predictions.csv",
+        run_name    = "kubric_vision",
+        coord_scale = 1000,
+        mask_mode   = "zero_coord",
     ),
     dict(
         dataset  = "kubric",
@@ -154,75 +168,101 @@ _RUNS: list[dict] = [
 
     # ── Epic Kitchen — DINO (merged binary + point) ───────────────────────────
     dict(
-        dataset  = "epic_kitchen",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/ek_dino_mlp2_prediction.csv",
-        run_name = "ek_dino_mlp2",
+        dataset     = "epic_kitchen",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/ek_dino_mlp2_prediction.csv",
+        run_name    = "ek_dino_mlp2",
+        coord_scale = 448,
+        mask_mode   = "predicted_touch",
     ),
     dict(
-        dataset  = "epic_kitchen",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/ek_dino_mlp3_prediction.csv",
-        run_name = "ek_dino_mlp3",
+        dataset     = "epic_kitchen",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/ek_dino_mlp3_prediction.csv",
+        run_name    = "ek_dino_mlp3",
+        coord_scale = 448,
+        mask_mode   = "predicted_touch",
     ),
     dict(
-        dataset  = "epic_kitchen",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/ek_dino_mlp4_prediction.csv",
-        run_name = "ek_dino_mlp4",
+        dataset     = "epic_kitchen",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/ek_dino_mlp4_prediction.csv",
+        run_name    = "ek_dino_mlp4",
+        coord_scale = 448,
+        mask_mode   = "predicted_touch",
     ),
     dict(
-        dataset  = "epic_kitchen",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/ek_dino_linear_prediction.csv",
-        run_name = "ek_dino_linear",
+        dataset     = "epic_kitchen",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/ek_dino_linear_prediction.csv",
+        run_name    = "ek_dino_linear",
+        coord_scale = 448,
+        mask_mode   = "predicted_touch",
     ),
 
     # ── Greatest Hits — DINO (merged binary + point) ─────────────────────────
     dict(
-        dataset  = "greatest_hits",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/gh_dino_mlp2_prediction.csv",
-        run_name = "gh_dino_mlp2",
+        dataset     = "greatest_hits",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/gh_dino_mlp2_prediction.csv",
+        run_name    = "gh_dino_mlp2",
+        coord_scale = 448,
+        mask_mode   = "predicted_touch",
     ),
     dict(
-        dataset  = "greatest_hits",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/gh_dino_mlp3_prediction.csv",
-        run_name = "gh_dino_mlp3",
+        dataset     = "greatest_hits",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/gh_dino_mlp3_prediction.csv",
+        run_name    = "gh_dino_mlp3",
+        coord_scale = 448,
+        mask_mode   = "predicted_touch",
     ),
     dict(
-        dataset  = "greatest_hits",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/gh_dino_mlp4_prediction.csv",
-        run_name = "gh_dino_mlp4",
+        dataset     = "greatest_hits",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/gh_dino_mlp4_prediction.csv",
+        run_name    = "gh_dino_mlp4",
+        coord_scale = 448,
+        mask_mode   = "predicted_touch",
     ),
     dict(
-        dataset  = "greatest_hits",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/gh_dino_linear_prediction.csv",
-        run_name = "gh_dino_linear",
+        dataset     = "greatest_hits",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/gh_dino_linear_prediction.csv",
+        run_name    = "gh_dino_linear",
+        coord_scale = 448,
+        mask_mode   = "predicted_touch",
     ),
 
     # ── Kubric — DINO (merged binary + point) ────────────────────────────────
     dict(
-        dataset  = "kubric",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/kubric_dino_mlp2_prediction.csv",
-        run_name = "kubric_dino_mlp2",
+        dataset     = "kubric",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/kubric_dino_mlp2_prediction.csv",
+        run_name    = "kubric_dino_mlp2",
+        coord_scale = 448,
+        mask_mode   = "predicted_touch",
     ),
     dict(
-        dataset  = "kubric",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/kubric_dino_mlp3_prediction.csv",
-        run_name = "kubric_dino_mlp3",
+        dataset     = "kubric",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/kubric_dino_mlp3_prediction.csv",
+        run_name    = "kubric_dino_mlp3",
+        coord_scale = 448,
+        mask_mode   = "predicted_touch",
     ),
     dict(
-        dataset  = "kubric",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/kubric_dino_mlp4_prediction.csv",
-        run_name = "kubric_dino_mlp4",
+        dataset     = "kubric",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/kubric_dino_mlp4_prediction.csv",
+        run_name    = "kubric_dino_mlp4",
+        coord_scale = 448,
+        mask_mode   = "predicted_touch",
     ),
     dict(
-        dataset  = "kubric",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/kubric_dino_linear_prediction.csv",
-        run_name = "kubric_dino_linear",
+        dataset     = "kubric",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/kubric_dino_linear_prediction.csv",
+        run_name    = "kubric_dino_linear",
+        coord_scale = 448,
+        mask_mode   = "predicted_touch",
     ),
 
     # ── Greatest Hits — Qwen finetuned (merged binary + point) ───────────────
     dict(
-        dataset  = "greatest_hits",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/gh_qwen_ft_prediction.csv",
-        run_name = "gh_qwen_ft",
+        dataset     = "greatest_hits",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/gh_qwen_ft_prediction.csv",
+        run_name    = "gh_qwen_ft",
+        coord_scale = 1000,
+        mask_mode   = "zero_coord",
     ),
 
     # ── Epic Kitchen — Qwen finetuned (binary only) ───────────────────────────
@@ -239,9 +279,11 @@ _RUNS: list[dict] = [
         run_name = "kubric_qwen_ft_binary",
     ),
     dict(
-        dataset  = "kubric",
-        csv      = "/home/dotero/Touch_Breaks_Feelings/results/kubric_qwen_ft_point_prediction.csv",
-        run_name = "kubric_qwen_ft_point",
+        dataset     = "kubric",
+        csv         = "/home/dotero/Touch_Breaks_Feelings/results/kubric_qwen_ft_point_prediction.csv",
+        run_name    = "kubric_qwen_ft_point",
+        coord_scale = 1000,
+        mask_mode   = "zero_coord",
     ),
 ]
 
@@ -259,6 +301,10 @@ def _build_cmd(run: dict, ds: dict, output_dir: Path, all_metrics: bool) -> list
     ]
     if ds["clusters"]:
         cmd += ["--clusters", ds["clusters"]]
+    if run.get("coord_scale"):
+        cmd += ["--coord-scale", str(run["coord_scale"])]
+    if run.get("mask_mode"):
+        cmd += ["--mask-mode", run["mask_mode"]]
     if all_metrics:
         cmd.append("--all-metrics")
     return cmd
