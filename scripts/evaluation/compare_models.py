@@ -188,76 +188,68 @@ def zone_recall(df: pd.DataFrame, grid: int = 8) -> tuple[np.ndarray, np.ndarray
     return recall, count
 
 
-# ── Plot 1: Depth comparison ──────────────────────────────────────────────────
+# ── Plot 1: Depth comparison (one figure per dataset) ─────────────────────────
 
-def plot_depth_comparison(
-    depth_data: dict[str, dict[str, dict[str, float]]],
+def plot_depth_dataset(
+    model_bins: dict[str, dict[str, float]],
+    dataset_label: str,
     output: Path,
 ) -> None:
     """
-    depth_data: {dataset_name → {model_name → {bin_label → recall}}}
-    Only datasets with at least one non-NaN value are shown.
+    model_bins: {model_name → {bin_label → recall}}
+    Skips the figure entirely if no model has any non-NaN depth value.
     """
-    valid_ds = [
-        ds for ds, model_dict in depth_data.items()
-        if any(
-            not np.isnan(v)
-            for bins in model_dict.values()
-            for v in bins.values()
-        )
-    ]
-    if not valid_ds:
-        print("[SKIP] depth comparison — no depth data available across any dataset")
+    has_data = any(
+        not np.isnan(v)
+        for bins in model_bins.values()
+        for v in bins.values()
+    )
+    if not has_data:
+        print(f"[SKIP] depth — no depth_touch data for {dataset_label}")
         return
 
     plot_style.apply()
-    n_ds = len(valid_ds)
-    fig, axes = plt.subplots(1, n_ds, figsize=(5.0 * n_ds, 4.5), squeeze=False)
-
     bin_labels = [b[0] for b in _DEPTH_BINS]
     n_models   = len(_MODELS)
     bar_w      = 0.22
     offsets    = np.linspace(-(n_models - 1) / 2, (n_models - 1) / 2, n_models) * bar_w
     x          = np.arange(len(bin_labels))
 
-    ds_labels = {ds["name"]: ds["label"] for ds in _DATASETS}
+    fig, ax = plt.subplots(figsize=(5.5, 4.5))
 
-    for col, ds_name in enumerate(valid_ds):
-        ax = axes[0, col]
-        for i, (model, offset) in enumerate(zip(_MODELS, offsets)):
-            bin_vals = depth_data[ds_name].get(model["name"], {})
-            ys = [bin_vals.get(b, float("nan")) for b in bin_labels]
-            ys_plot = [0.0 if np.isnan(v) else v for v in ys]
+    for model, offset in zip(_MODELS, offsets):
+        bins = model_bins.get(model["name"], {})
+        ys = [bins.get(b, float("nan")) for b in bin_labels]
+        ys_plot = [0.0 if np.isnan(v) else v for v in ys]
 
-            ax.bar(
-                x + offset, ys_plot,
-                width=bar_w * 0.92,
-                color=model["color"],
-                label=model["label"],
-                alpha=0.88,
-                edgecolor="white",
-                linewidth=0.5,
-                zorder=3,
-            )
-            for j, v in enumerate(ys):
-                if not np.isnan(v):
-                    ax.text(
-                        x[j] + offset, v + 0.018,
-                        f"{v:.2f}",
-                        ha="center", va="bottom", fontsize=7,
-                        color=plot_style.DARK,
-                    )
+        ax.bar(
+            x + offset, ys_plot,
+            width=bar_w * 0.92,
+            color=model["color"],
+            label=model["label"],
+            alpha=0.88,
+            edgecolor="white",
+            linewidth=0.5,
+            zorder=3,
+        )
+        for j, v in enumerate(ys):
+            if not np.isnan(v):
+                ax.text(
+                    x[j] + offset, v + 0.018,
+                    f"{v:.2f}",
+                    ha="center", va="bottom", fontsize=7,
+                    color=plot_style.DARK,
+                )
 
-        ax.set_xticks(x)
-        ax.set_xticklabels(bin_labels, fontsize=10)
-        ax.set_ylim(0, 1.2)
-        ax.set_ylabel("Recall" if col == 0 else "")
-        ax.set_title(ds_labels.get(ds_name, ds_name), fontsize=11, fontweight="bold")
-        ax.set_xlim(-0.7, len(bin_labels) - 0.3)
-        if col == 0:
-            ax.legend(loc="upper left", fontsize=8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(bin_labels, fontsize=10)
+    ax.set_ylim(0, 1.2)
+    ax.set_ylabel("Recall")
+    ax.set_title(f"Touch Recall by Depth Distance\n{dataset_label}",
+                 fontsize=12, fontweight="bold")
+    ax.set_xlim(-0.7, len(bin_labels) - 0.3)
+    ax.legend(loc="upper left", fontsize=8)
 
-    fig.suptitle("Touch Recall by Depth Distance", fontsize=13, fontweight="bold")
     plt.savefig(output)
     plt.close(fig)
     print(f"Saved → {output}")
@@ -331,37 +323,34 @@ def plot_class_comparison(
     print(f"Saved → {output}")
 
 
-# ── Plot 3: Touch zone heatmaps ───────────────────────────────────────────────
+# ── Plot 3: Touch zone heatmaps (one figure per dataset) ─────────────────────
 
-def plot_zone_comparison(
-    zone_data: dict[str, dict[str, tuple[np.ndarray, np.ndarray]]],
+def plot_zone_dataset(
+    model_grids: dict[str, tuple[np.ndarray, np.ndarray] | None],
+    dataset_label: str,
     output: Path,
     grid: int = 8,
 ) -> None:
     """
-    zone_data: {model_name → {dataset_name → (recall_grid, count_grid)}}
-    All heatmaps share a single colorbar anchored at the global minimum recall.
+    model_grids: {model_name → (recall_grid, count_grid) | None}
+    Layout: 1 row × 3 cols (one per model).
+    Colorbar vmin is anchored at the minimum recall across all three models.
     """
     plot_style.apply()
 
     model_names  = [m["name"]  for m in _MODELS]
     model_labels = [m["label"] for m in _MODELS]
-    ds_names     = [ds["name"]  for ds in _DATASETS]
-    ds_labels    = [ds["label"] for ds in _DATASETS]
+    n_cols = len(_MODELS)
 
-    n_rows = len(_MODELS)
-    n_cols = len(_DATASETS)
-
-    # Global vmin across all valid cells
+    # vmin = min recall across all models for this dataset
     all_vals = []
     for mname in model_names:
-        for dsname in ds_names:
-            entry = zone_data.get(mname, {}).get(dsname)
-            if entry is not None:
-                recall, _ = entry
-                valid = recall[~np.isnan(recall)]
-                if valid.size > 0:
-                    all_vals.extend(valid.tolist())
+        entry = model_grids.get(mname)
+        if entry is not None:
+            recall, _ = entry
+            valid = recall[~np.isnan(recall)]
+            if valid.size > 0:
+                all_vals.extend(valid.tolist())
 
     vmin = float(min(all_vals)) if all_vals else 0.0
     vmax = 1.0
@@ -370,72 +359,61 @@ def plot_zone_comparison(
     cmap.set_bad(color="#EBEBEB")
     norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
 
-    cell_px = 4.0
+    cell_size = 4.2
     fig, axes = plt.subplots(
-        n_rows, n_cols,
-        figsize=(cell_px * n_cols + 0.8, cell_px * n_rows),
+        1, n_cols,
+        figsize=(cell_size * n_cols + 0.9, cell_size + 0.6),
+        squeeze=False,
     )
-    # Ensure axes is always 2D
-    if n_rows == 1:
-        axes = axes[np.newaxis, :]
-    if n_cols == 1:
-        axes = axes[:, np.newaxis]
 
-    for row, (mname, mlabel) in enumerate(zip(model_names, model_labels)):
-        for col, (dsname, dslabel) in enumerate(zip(ds_names, ds_labels)):
-            ax = axes[row, col]
-            ax.grid(False)
+    for col, (mname, mlabel) in enumerate(zip(model_names, model_labels)):
+        ax = axes[0, col]
+        ax.grid(False)
+        ax.set_title(mlabel, fontsize=11, fontweight="bold")
 
-            entry = zone_data.get(mname, {}).get(dsname)
-
-            if col == 0:
-                ax.set_ylabel(mlabel, fontsize=10, fontweight="bold", labelpad=6)
-            if row == 0:
-                ax.set_title(dslabel, fontsize=10, fontweight="bold")
-
-            if entry is None:
-                ax.set_facecolor("#F3F4F6")
-                ax.text(0.5, 0.5, "No data", ha="center", va="center",
-                        transform=ax.transAxes, fontsize=10, color=plot_style.GRAY)
-                ax.set_xticks([])
-                ax.set_yticks([])
-                continue
-
-            recall, count = entry
-            masked = np.ma.masked_invalid(recall)
-            ax.imshow(masked, cmap=cmap, norm=norm, aspect="equal")
-
-            # Cell text
-            for cy in range(grid):
-                for cx in range(grid):
-                    n = count[cy, cx]
-                    if n == 0:
-                        ax.text(cx, cy, "–", ha="center", va="center",
-                                fontsize=6, color="#BBBBBB")
-                    else:
-                        v = recall[cy, cx]
-                        brightness = (v - vmin) / max(1e-9, vmax - vmin)
-                        fg = "white" if brightness < 0.25 or brightness > 0.78 else plot_style.DARK
-                        ax.text(cx, cy, f"{v:.2f}", ha="center", va="center",
-                                fontsize=5.5, color=fg)
-
-            # Cell dividers
-            for i in range(grid + 1):
-                ax.axhline(i - 0.5, color="white", linewidth=0.5)
-                ax.axvline(i - 0.5, color="white", linewidth=0.5)
-
+        entry = model_grids.get(mname)
+        if entry is None:
+            ax.set_facecolor("#F3F4F6")
+            ax.text(0.5, 0.5, "No data", ha="center", va="center",
+                    transform=ax.transAxes, fontsize=10, color=plot_style.GRAY)
             ax.set_xticks([])
             ax.set_yticks([])
+            continue
 
-    # Shared colorbar on the right
+        recall, count = entry
+        masked = np.ma.masked_invalid(recall)
+        ax.imshow(masked, cmap=cmap, norm=norm, aspect="equal")
+
+        for cy in range(grid):
+            for cx in range(grid):
+                n = count[cy, cx]
+                if n == 0:
+                    ax.text(cx, cy, "–", ha="center", va="center",
+                            fontsize=6, color="#BBBBBB")
+                else:
+                    v = recall[cy, cx]
+                    brightness = (v - vmin) / max(1e-9, vmax - vmin)
+                    fg = "white" if brightness < 0.25 or brightness > 0.78 else plot_style.DARK
+                    ax.text(cx, cy, f"{v:.2f}", ha="center", va="center",
+                            fontsize=5.5, color=fg)
+
+        for i in range(grid + 1):
+            ax.axhline(i - 0.5, color="white", linewidth=0.5)
+            ax.axvline(i - 0.5, color="white", linewidth=0.5)
+
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    # Shared colorbar
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
-    cbar = fig.colorbar(sm, ax=axes, pad=0.02, fraction=0.018, aspect=35)
+    cbar = fig.colorbar(sm, ax=axes, pad=0.02, fraction=0.025, aspect=25)
     cbar.set_label("Recall (hit rate)", fontsize=9)
     cbar.ax.tick_params(labelsize=8)
     cbar.outline.set_linewidth(0.5)
 
-    fig.suptitle("Touch Zone Recall  (shared colour scale)", fontsize=13, fontweight="bold")
+    fig.suptitle(f"Touch Zone Recall  —  {dataset_label}",
+                 fontsize=12, fontweight="bold")
     plt.savefig(output)
     plt.close(fig)
     print(f"Saved → {output}")
@@ -534,18 +512,25 @@ def main() -> None:
     # ── Generate figures ──────────────────────────────────────────────────────
     print("\n── Generating figures ──────────────────────────────────────────")
 
-    plot_depth_comparison(
-        depth_data,
-        args.output_dir / "depth_comparison.png",
-    )
+    for ds in _DATASETS:
+        slug  = ds["name"]
+        label = ds["label"]
+
+        plot_depth_dataset(
+            depth_data[slug],
+            label,
+            args.output_dir / f"depth_{slug}.png",
+        )
+        plot_zone_dataset(
+            {m["name"]: zone_data[m["name"]][slug] for m in _MODELS},
+            label,
+            args.output_dir / f"zone_{slug}.png",
+            grid=args.grid,
+        )
+
     plot_class_comparison(
         class_data,
         args.output_dir / "class_comparison.png",
-    )
-    plot_zone_comparison(
-        zone_data,
-        args.output_dir / "zone_comparison.png",
-        grid=args.grid,
     )
 
     print(f"\nAll figures saved to {args.output_dir}/")
