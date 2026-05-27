@@ -44,6 +44,7 @@ _SCRIPTS = {
     "zones":       _EVAL / "touch_zones"       / "analyze_grid_performance.py",
     "point_zones": _EVAL / "touch_zones"       / "analyze_point_performance.py",
     "failures":    _EVAL / "failure_sampling"  / "sample_failures.py",
+    "successes":   _EVAL / "success_sampling"  / "sample_successes.py",
 }
 
 _OUTPUTS = {
@@ -126,7 +127,7 @@ def main() -> None:
     parser.add_argument("--skip", nargs="*",
                         choices=list(_SCRIPTS), default=[],
                         metavar="STEP",
-                        help="Steps to skip: depth object coverage zones point_zones failures")
+                        help="Steps to skip: depth object coverage zones point_zones failures successes")
     parser.add_argument("--all-metrics", action="store_true",
                         help="Pass --all-metrics to every analysis script: generates one figure per "
                              "metric with a _<metric> suffix. Per-script --*-metric flags are ignored.")
@@ -154,6 +155,8 @@ def main() -> None:
                         help="Max failure samples per sub-category for the failures step (default: 3)")
     parser.add_argument("--failures-seed", type=int, default=42,
                         help="Random seed for failure sampling (default: 42)")
+    parser.add_argument("--successes-seed", type=int, default=42,
+                        help="Random seed for success sampling (default: 42)")
 
     args = parser.parse_args()
 
@@ -201,6 +204,7 @@ def main() -> None:
             Dataset: {args.dataset if args.dataset else 'None'}
             N failure samples: {args.n_samples}
             Failures seed: {args.failures_seed}
+            Successes seed: {args.successes_seed}
         """))
 
     # ── 1. Depth ──────────────────────────────────────────────────────────────
@@ -341,6 +345,27 @@ def main() -> None:
             results["failures"] = f"ERROR: {exc}"
     else:
         results["failures"] = "SKIPPED"
+
+    # ── 7. Success sampling ───────────────────────────────────────────────────
+    if "successes" not in skipped:
+        try:
+            dataset_args = ["--dataset", args.dataset] if args.dataset else []
+            ok = _run(
+                [py, str(_SCRIPTS["successes"]),
+                 str(args.csv),
+                 "--output-dir", str(out_dir),
+                 "--n-samples",  str(args.n_samples),
+                 "--seed",       str(args.successes_seed),
+                 *dataset_args,
+                 *ann_args],
+                "successes", log,
+            )
+            results["successes"] = str(out_dir / "depth_successes") + ", " + str(out_dir / "object_size_successes") if ok else "FAILED"
+        except Exception as exc:
+            _tee(f"  [ERROR] successes raised {exc!r}", log)
+            results["successes"] = f"ERROR: {exc}"
+    else:
+        results["successes"] = "SKIPPED"
 
     # ── Global metrics ────────────────────────────────────────────────────────
     try:
