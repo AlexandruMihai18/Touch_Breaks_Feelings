@@ -44,7 +44,8 @@ def run_sam3(
 
     processor, model, device = _load_hf_sam3(resolved_model_id)
     image = Image.fromarray(image_np).convert("RGB")
-    inputs = processor(images=image, text=original_prompt, return_tensors="pt")
+    inputs = _prepare_sam3_inputs(processor, image, original_prompt)
+    target_sizes = _target_sizes_from_inputs(inputs, image_np.shape[:2])
     inputs = _move_to_device(inputs, device)
 
     with torch.inference_mode():
@@ -53,7 +54,7 @@ def run_sam3(
     candidates = _extract_candidates(
         processor=processor,
         outputs=outputs,
-        target_size=image_np.shape[:2],
+        target_sizes=target_sizes,
         score_threshold=score_threshold,
     )
     if not candidates:
@@ -79,14 +80,49 @@ def run_sam3(
 
 @lru_cache(maxsize=4)
 def _load_hf_sam3(model_id: str):
-    from transformers import AutoModel, AutoProcessor
-
     trust_remote_code = os.environ.get("SAM3_TRUST_REMOTE_CODE", "1") not in {"0", "false", "False"}
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=trust_remote_code)
-    model = AutoModel.from_pretrained(model_id, trust_remote_code=trust_remote_code).to(device)
+    try:
+        from transformers import Sam3Model, Sam3Processor
+
+        processor = Sam3Processor.from_pretrained(model_id, trust_remote_code=trust_remote_code)
+        model = Sam3Model.from_pretrained(model_id, trust_remote_code=trust_remote_code).to(device)
+    except (ImportError, AttributeError):
+        from transformers import AutoModel, AutoProcessor
+
+        processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=trust_remote_code)
+        model = AutoModel.from_pretrained(model_id, trust_remote_code=trust_remote_code).to(device)
     model.eval()
     return processor, model, device
+
+
+def _prepare_sam3_inputs(processor: Any, image: Image.Image, prompt: str) -> Any:
+    try:
+        return processor(images=image, text=prompt, return_tensors="pt")
+    except TypeError as exc:
+        if "unexpected keyword argument 'text'" not in str(exc):
+            raise
+
+    image_inputs = processor(images=image, return_tensors="pt")
+    text_inputs = processor(text=prompt, return_tensors="pt")
+
+    if not isinstance(image_inputs, dict) and hasattr(image_inputs, "data"):
+        image_inputs = image_inputs.data
+    if not isinstance(text_inputs, dict) and hasattr(text_inputs, "data"):
+        text_inputs = text_inputs.data
+
+    merged = dict(image_inputs)
+    merged.update(dict(text_inputs))
+    return merged
+
+
+def _target_sizes_from_inputs(inputs: Any, fallback: tuple[int, int]) -> Any:
+    original_sizes = inputs.get("original_sizes") if hasattr(inputs, "get") else None
+    if original_sizes is None:
+        return [fallback]
+    if torch.is_tensor(original_sizes):
+        return original_sizes.tolist()
+    return original_sizes
 
 
 def _move_to_device(inputs: Any, device: str) -> Any:
@@ -100,29 +136,38 @@ def _move_to_device(inputs: Any, device: str) -> Any:
 def _extract_candidates(
     processor: Any,
     outputs: Any,
-    target_size: tuple[int, int],
+    target_sizes: Any,
     score_threshold: float,
 ) -> list[dict[str, Any]]:
-    processed = _post_process_candidates(processor, outputs, target_size)
+    processed = _post_process_candidates(processor, outputs, target_sizes, score_threshold)
     if processed is not None:
         return _candidates_from_processed(processed, score_threshold)
     return _candidates_from_outputs(outputs, score_threshold)
 
 
-def _post_process_candidates(processor: Any, outputs: Any, target_size: tuple[int, int]) -> Any:
-    for name in (
-        "post_process_instance_segmentation",
-        "post_process_semantic_segmentation",
-        "post_process_panoptic_segmentation",
-    ):
-        fn = getattr(processor, name, None)
-        if fn is None:
-            continue
+def _post_process_candidates(
+    processor: Any,
+    outputs: Any,
+    target_sizes: Any,
+    score_threshold: float,
+) -> Any:
+    fn = getattr(processor, "post_process_instance_segmentation", None)
+    if fn is not None:
         try:
-            return fn(outputs, target_sizes=[target_size])
+            return fn(
+                outputs,
+                threshold=score_threshold,
+                mask_threshold=0.5,
+                target_sizes=target_sizes,
+            )
         except TypeError:
+            return fn(outputs, target_sizes=target_sizes)
+
+    for name in ("post_process_semantic_segmentation", "post_process_panoptic_segmentation"):
+        fn = getattr(processor, name, None)
+        if fn is not None:
             try:
-                return fn(outputs, target_size=[target_size])
+                return fn(outputs, target_sizes=target_sizes)
             except TypeError:
                 continue
     return None
